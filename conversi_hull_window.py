@@ -37,9 +37,25 @@ class ConversiHullWindow(tk.Toplevel):
         self.face_cascade = self._load_cascade("haarcascade_frontalface_default.xml")
         self.face_alt_cascade = self._load_cascade("haarcascade_frontalface_alt2.xml")
 
+        self.colors = {
+            "bg_root": "#0B1D36",
+            "bg_main": "#0E2744",
+            "bg_sidebar": "#112A46",
+            "bg_sidebar_btn": "#1B3B63",
+            "bg_panel": "#143457",
+            "bg_panel_inner": "#0F2A48",
+            "bg_desc": "#143457",
+            "fg_primary": "#EAF2FF",
+            "fg_muted": "#B8CBE2",
+            "accent_blue": "#2D9CDB",
+            "accent_orange": "#F2994A",
+        }
+        self.padding = {"outer": 12, "gap": 8, "row": 6}
+
         self.title("Dashboard Conversi hull")
-        self.geometry("1380x820")
-        self.configure(bg="#ECF0F1")
+        self.geometry("1320x760")
+        self.configure(bg=self.colors["bg_root"])
+        self.minsize(1180, 700)
 
         self.metric_labels = {}
         self.status_var = tk.StringVar(value="Status: Siap. Pilih Open Drive_Local atau Kamera.")
@@ -48,8 +64,13 @@ class ConversiHullWindow(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", self.close)
 
     def _build_ui(self):
-        root = tk.Frame(self, bg="#ECF0F1")
-        root.pack(fill="both", expand=True, padx=10, pady=10)
+        root = tk.Frame(self, bg=self.colors["bg_root"])
+        root.pack(
+            fill="both",
+            expand=True,
+            padx=self.padding["outer"],
+            pady=self.padding["outer"],
+        )
         root.grid_rowconfigure(0, weight=1)
         root.grid_columnconfigure(1, weight=1)
 
@@ -57,17 +78,17 @@ class ConversiHullWindow(tk.Toplevel):
         self._build_main_area(root)
 
     def _build_left_menu(self, parent):
-        left_menu = tk.Frame(parent, bg="#1F2D3D", width=200, relief="solid", bd=2)
-        left_menu.grid(row=0, column=0, sticky="nsw", padx=(0, 10))
+        left_menu = tk.Frame(parent, bg=self.colors["bg_sidebar"], width=190, relief="solid", bd=1)
+        left_menu.grid(row=0, column=0, sticky="nsw", padx=(0, self.padding["gap"]))
         left_menu.grid_propagate(False)
 
         tk.Label(
             left_menu,
             text="CONVERSI HULL",
-            bg="#1F2D3D",
-            fg="white",
-            font=("Arial", 12, "bold"),
-        ).pack(fill="x", padx=8, pady=(12, 8))
+            bg=self.colors["bg_sidebar"],
+            fg=self.colors["fg_primary"],
+            font=("Segoe UI", 13, "bold"),
+        ).pack(fill="x", padx=12, pady=(14, 10))
 
         buttons = [
             ("Open Drive_Local", self.open_drive_local),
@@ -80,14 +101,16 @@ class ConversiHullWindow(tk.Toplevel):
                 left_menu,
                 text=text,
                 command=cmd,
-                font=("Arial", 10, "bold"),
-                bg="#ECF0F1",
-                fg="#111111",
+                font=("Segoe UI", 10, "bold"),
+                bg=self.colors["bg_sidebar_btn"],
+                fg=self.colors["fg_primary"],
+                activebackground="#26517F",
+                activeforeground=self.colors["fg_primary"],
                 width=18,
                 relief="raised",
-                bd=2,
+                bd=1,
                 cursor="hand2",
-            ).pack(fill="x", padx=12, pady=6)
+            ).pack(fill="x", padx=12, pady=5, ipady=3)
 
         tk.Label(
             left_menu,
@@ -96,38 +119,53 @@ class ConversiHullWindow(tk.Toplevel):
                 "- Klik sekali: mulai live\n"
                 "- Klik lagi: capture + deteksi"
             ),
-            bg="#1F2D3D",
-            fg="#D5DBDB",
+            bg=self.colors["bg_sidebar"],
+            fg=self.colors["fg_muted"],
             justify="left",
             anchor="w",
-            font=("Arial", 9),
+            font=("Segoe UI", 9),
         ).pack(fill="x", padx=12, pady=(14, 8))
 
     def _build_main_area(self, parent):
-        main = tk.Frame(parent, bg="#ECF0F1")
+        main = tk.Frame(parent, bg=self.colors["bg_main"])
         main.grid(row=0, column=1, sticky="nsew")
-        main.grid_rowconfigure(0, weight=1)
-        main.grid_columnconfigure(0, weight=4, uniform="panel")
-        main.grid_columnconfigure(1, weight=4, uniform="panel")
-        main.grid_columnconfigure(2, weight=3, uniform="panel")
+        main.grid_rowconfigure(0, weight=0)
+        main.grid_rowconfigure(1, weight=0)
+        main.grid_rowconfigure(2, weight=0)
+        main.grid_columnconfigure(0, weight=1)
 
-        self.original_label = self._make_panel(main, 0, "Citra Asal", "Belum ada citra")
-        self.result_label = self._make_panel(main, 1, "Hasil Convex Hull", "Belum ada hasil")
+        preview_wrap = tk.Frame(main, bg=self.colors["bg_main"], height=500)
+        preview_wrap.grid(row=0, column=0, sticky="ew", pady=(self.padding["gap"], self.padding["gap"]))
+        preview_wrap.grid_propagate(False)
+        preview_wrap.grid_rowconfigure(0, weight=1)
+        preview_wrap.grid_columnconfigure(0, weight=5, uniform="panel")
+        preview_wrap.grid_columnconfigure(1, weight=5, uniform="panel")
+        preview_wrap.grid_columnconfigure(2, weight=3, uniform="panel")
+
+        self.original_label = self._make_panel(preview_wrap, 0, "Citra Asal", "Belum ada citra")
+        self.result_label = self._make_panel(preview_wrap, 1, "Hasil Convex Hull", "Belum ada hasil")
 
         desc_box = tk.LabelFrame(
-            main,
+            preview_wrap,
             text="Deskripsi Objek",
-            bg="#D0D3D4",
-            fg="#111111",
-            font=("Arial", 11, "bold"),
-            bd=2,
+            bg=self.colors["bg_desc"],
+            fg=self.colors["fg_primary"],
+            font=("Segoe UI", 11, "bold"),
+            bd=1,
             relief="solid",
         )
-        desc_box.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
+        desc_box.grid(
+            row=0,
+            column=2,
+            sticky="nsew",
+            padx=(self.padding["gap"], 0),
+            pady=(self.padding["gap"], 0),
+        )
         desc_box.grid_columnconfigure(0, weight=1)
 
         rows = [
             ("deskripsi", "Deskripsi"),
+            ("pixel_objek", "Piksel Objek"),
             ("luas", "Luas"),
             ("panjang", "Panjang"),
             ("lebar", "Lebar"),
@@ -137,31 +175,31 @@ class ConversiHullWindow(tk.Toplevel):
             ("kerampingan", "Kerampingan"),
         ]
         for key, label_text in rows:
-            row = tk.Frame(desc_box, bg="#D0D3D4")
-            row.pack(fill="x", padx=8, pady=3)
+            row = tk.Frame(desc_box, bg=self.colors["bg_desc"])
+            row.pack(fill="x", padx=10, pady=4)
             tk.Label(
                 row,
                 text=f"{label_text:<12}",
-                bg="#D0D3D4",
-                fg="#111111",
+                bg=self.colors["bg_desc"],
+                fg=self.colors["fg_primary"],
                 width=12,
                 anchor="w",
-                font=("Arial", 10, "bold"),
+                font=("Segoe UI", 10, "bold"),
             ).pack(side="left")
             value = tk.Label(
                 row,
                 text="-",
-                bg="#D0D3D4",
-                fg="#111111",
+                bg=self.colors["bg_desc"],
+                fg=self.colors["fg_muted"],
                 anchor="w",
                 justify="left",
-                font=("Arial", 10),
+                font=("Segoe UI", 10),
             )
             value.pack(side="left", fill="x", expand=True)
             self.metric_labels[key] = value
 
-        action_row = tk.Frame(main, bg="#ECF0F1")
-        action_row.grid(row=1, column=0, columnspan=3, sticky="ew", pady=(8, 4))
+        action_row = tk.Frame(main, bg=self.colors["bg_main"])
+        action_row.grid(row=1, column=0, sticky="ew", pady=(self.padding["row"], self.padding["row"]))
         for i in range(3):
             action_row.grid_columnconfigure(i, weight=1)
 
@@ -171,10 +209,12 @@ class ConversiHullWindow(tk.Toplevel):
             command=self.close,
             bg="#E74C3C",
             fg="white",
-            font=("Arial", 10, "bold"),
+            font=("Segoe UI", 10, "bold"),
             relief="raised",
-            bd=2,
-        ).grid(row=0, column=0, padx=4, sticky="ew")
+            bd=1,
+            activebackground="#C0392B",
+            activeforeground="white",
+        ).grid(row=0, column=0, padx=(0, 5), sticky="ew", ipady=4)
 
         tk.Button(
             action_row,
@@ -182,10 +222,12 @@ class ConversiHullWindow(tk.Toplevel):
             command=self.export_to_excel,
             bg="#8E44AD",
             fg="white",
-            font=("Arial", 10, "bold"),
+            font=("Segoe UI", 10, "bold"),
             relief="raised",
-            bd=2,
-        ).grid(row=0, column=1, padx=4, sticky="ew")
+            bd=1,
+            activebackground="#7D3C98",
+            activeforeground="white",
+        ).grid(row=0, column=1, padx=5, sticky="ew", ipady=4)
 
         tk.Button(
             action_row,
@@ -193,19 +235,21 @@ class ConversiHullWindow(tk.Toplevel):
             command=self.save_to_database,
             bg="#27AE60",
             fg="white",
-            font=("Arial", 10, "bold"),
+            font=("Segoe UI", 10, "bold"),
             relief="raised",
-            bd=2,
-        ).grid(row=0, column=2, padx=4, sticky="ew")
+            bd=1,
+            activebackground="#239B56",
+            activeforeground="white",
+        ).grid(row=0, column=2, padx=(5, 0), sticky="ew", ipady=4)
 
         tk.Label(
             main,
             textvariable=self.status_var,
-            bg="#ECF0F1",
-            fg="#2C3E50",
+            bg=self.colors["bg_main"],
+            fg=self.colors["fg_muted"],
             anchor="w",
-            font=("Arial", 10, "italic"),
-        ).grid(row=2, column=0, columnspan=3, sticky="ew", pady=(4, 0))
+            font=("Segoe UI", 10, "italic"),
+        ).grid(row=2, column=0, sticky="ew", pady=(2, 0))
 
         self.original_label.bind("<Configure>", lambda _e: self._refresh_image_panels())
         self.result_label.bind("<Configure>", lambda _e: self._refresh_image_panels())
@@ -214,22 +258,28 @@ class ConversiHullWindow(tk.Toplevel):
         panel = tk.LabelFrame(
             parent,
             text=title,
-            bg="#D0D3D4",
-            fg="#111111",
-            font=("Arial", 11, "bold"),
-            bd=2,
+            bg=self.colors["bg_panel"],
+            fg=self.colors["fg_primary"],
+            font=("Segoe UI", 11, "bold"),
+            bd=1,
             relief="solid",
         )
-        panel.grid(row=0, column=col, sticky="nsew", padx=5, pady=5)
+        panel.grid(
+            row=0,
+            column=col,
+            sticky="nsew",
+            padx=(0 if col == 0 else self.padding["gap"], 0),
+            pady=(self.padding["gap"], 0),
+        )
         panel.grid_propagate(False)
 
         label = tk.Label(
             panel,
             text=empty_text,
-            bg="black",
-            fg="white",
+            bg=self.colors["bg_panel_inner"],
+            fg=self.colors["fg_primary"],
             anchor="center",
-            font=("Arial", 10),
+            font=("Segoe UI", 10),
         )
         label.pack(fill="both", expand=True)
         return label
@@ -526,6 +576,7 @@ class ConversiHullWindow(tk.Toplevel):
             )
             return empty_result, {
                 "deskripsi": "Objek presisi tidak terdeteksi",
+                "pixel_objek": 0,
                 "luas": 0.0,
                 "panjang": 0.0,
                 "lebar": 0.0,
@@ -546,6 +597,9 @@ class ConversiHullWindow(tk.Toplevel):
         dispersi = float((perimeter * perimeter) / area) if area > 0 else 0.0
         kebulatan = float((4.0 * np.pi * area) / (perimeter * perimeter)) if perimeter > 0 else 0.0
         kerampingan = float(panjang / lebar) if lebar > 0 else 0.0
+        mask_objek = np.zeros(work_bgr.shape[:2], dtype=np.uint8)
+        cv2.drawContours(mask_objek, [best["contour"]], -1, 255, -1)
+        pixel_objek = int(np.count_nonzero(mask_objek))
 
         result = image_bgr.copy()
         offset = np.array([[[off_x, off_y]]], dtype=np.int32)
@@ -570,6 +624,7 @@ class ConversiHullWindow(tk.Toplevel):
 
         metrics = {
             "deskripsi": f"Objek presisi: {len(selected)} (metrik objek utama)",
+            "pixel_objek": pixel_objek,
             "luas": area,
             "panjang": panjang,
             "lebar": lebar,
@@ -743,6 +798,7 @@ class ConversiHullWindow(tk.Toplevel):
             return
 
         self.metric_labels["deskripsi"].configure(text=metrics.get("deskripsi", "-"))
+        self.metric_labels["pixel_objek"].configure(text=str(int(metrics.get("pixel_objek", 0))))
         self.metric_labels["luas"].configure(text=self._format_float(metrics.get("luas", 0.0), 1))
         self.metric_labels["panjang"].configure(text=self._format_float(metrics.get("panjang", 0.0), 0))
         self.metric_labels["lebar"].configure(text=self._format_float(metrics.get("lebar", 0.0), 0))
@@ -772,31 +828,36 @@ class ConversiHullWindow(tk.Toplevel):
             return
 
         rgb = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
-        target_w = max(220, int(label_widget.winfo_width()))
-        target_h = max(180, int(label_widget.winfo_height()))
-        resized = self._resize_contain(rgb, target_w, target_h)
+        target_w = max(320, int(label_widget.winfo_width()))
+        target_h = max(220, int(label_widget.winfo_height()))
+        resized = self._resize_cover(rgb, target_w, target_h)
 
         photo = ImageTk.PhotoImage(Image.fromarray(resized))
         label_widget.configure(image=photo, text="")
         label_widget.image = photo
 
-    def _resize_contain(self, rgb_image, target_w, target_h):
+    def _resize_cover(self, rgb_image, target_w, target_h):
         src_h, src_w = rgb_image.shape[:2]
         if src_h <= 0 or src_w <= 0:
             return rgb_image
 
-        ratio = min(target_w / float(src_w), target_h / float(src_h))
+        # Cover fill: isi penuh panel tanpa black bar, dengan crop kecil di tepi.
+        ratio = max(target_w / float(src_w), target_h / float(src_h))
         ratio = max(ratio, 1e-6)
         new_w = max(1, int(src_w * ratio))
         new_h = max(1, int(src_h * ratio))
         interp = cv2.INTER_CUBIC if ratio > 1.0 else cv2.INTER_AREA
         resized = cv2.resize(rgb_image, (new_w, new_h), interpolation=interp)
 
-        canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)
-        x0 = (target_w - new_w) // 2
-        y0 = (target_h - new_h) // 2
-        canvas[y0:y0 + new_h, x0:x0 + new_w] = resized
-        return canvas
+        x0 = max(0, (new_w - target_w) // 2)
+        y0 = max(0, (new_h - target_h) // 2)
+        x1 = min(new_w, x0 + target_w)
+        y1 = min(new_h, y0 + target_h)
+
+        cropped = resized[y0:y1, x0:x1]
+        if cropped.shape[1] != target_w or cropped.shape[0] != target_h:
+            cropped = cv2.resize(cropped, (target_w, target_h), interpolation=cv2.INTER_AREA)
+        return cropped
 
     def export_to_excel(self):
         if not self.current_metrics:
@@ -816,6 +877,7 @@ class ConversiHullWindow(tk.Toplevel):
         row = {
             "tanggal_analisis": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "sumber_citra": self.current_source_name,
+            "pixel_objek": int(self.current_metrics.get("pixel_objek", 0)),
             "luas": float(self.current_metrics.get("luas", 0.0)),
             "panjang": float(self.current_metrics.get("panjang", 0.0)),
             "lebar": float(self.current_metrics.get("lebar", 0.0)),
@@ -828,6 +890,7 @@ class ConversiHullWindow(tk.Toplevel):
         headers = [
             "tanggal_analisis",
             "sumber_citra",
+            "pixel_objek",
             "luas",
             "panjang",
             "lebar",
