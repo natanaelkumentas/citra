@@ -913,6 +913,63 @@ class ConversiHullWindow(tk.Toplevel):
             messagebox.showwarning("Info", "Belum ada data analisis untuk disimpan.")
             return
 
+        supabase_url = "https://lvvaydjnadyywvdbiueu.supabase.co/rest/v1/analisis_objek"
+        supabase_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2dmF5ZGpuYWR5eXd2ZGJpdWV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3MDQ0ODIsImV4cCI6MjA4NjI4MDQ4Mn0.PjWS-pF5M0nW5WzcI77Ux26OI-_nVt_mRxkFrtgZc68"
+        
+        headers = {
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+        }
+
+        payload = {
+            "jumlah_objek": int(self.current_metrics.get("objek_terdeteksi", 0)),
+            "piksel_objek": int(self.current_metrics.get("pixel_objek", 0)),
+            "luas": float(self.current_metrics.get("luas", 0.0)),
+            "panjang": float(self.current_metrics.get("panjang", 0.0)),
+            "lebar": float(self.current_metrics.get("lebar", 0.0)),
+            "perimeter": float(self.current_metrics.get("perimeter", 0.0)),
+            "dispersi": float(self.current_metrics.get("dispersi", 0.0)),
+            "kebulatan": float(self.current_metrics.get("kebulatan", 0.0)),
+            "kerampingan": float(self.current_metrics.get("kerampingan", 0.0))
+        }
+
+        try:
+            import urllib.request
+            import urllib.error
+            
+            data_bytes = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(
+                supabase_url,
+                data=data_bytes,
+                headers=headers,
+                method='POST'
+            )
+            
+            with urllib.request.urlopen(req) as response:
+                status_code = response.getcode()
+                if status_code in (200, 201, 204):
+                    self.set_status("Data berhasil disimpan ke database Supabase.")
+                    messagebox.showinfo("Sukses", "Data berhasil disimpan ke database Supabase!")
+                else:
+                    self.set_status("Gagal menyimpan ke database Supabase.")
+                    messagebox.showerror("Error", f"Status code tak dikenal: {status_code}")
+                    self._save_to_local()
+                    
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
+            error_body = ""
+            if hasattr(e, 'read'):
+                error_body = e.read().decode('utf-8', errors='ignore')
+            self.set_status("Gagal menyimpan ke database Supabase (Network/HTTP Error).")
+            messagebox.showerror("Error API", f"Gagal API HTTP Error:\n{str(e)}\n{error_body}")
+            self._save_to_local()
+        except Exception as e:
+            self.set_status("Koneksi gagal atau format data salah.")
+            messagebox.showerror("Error", f"Terjadi kesalahan saat proses koneksi:\n{str(e)}")
+            self._save_to_local()
+
+    def _save_to_local(self):
         data = {
             "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "sumber_citra": self.current_source_name,
@@ -922,12 +979,11 @@ class ConversiHullWindow(tk.Toplevel):
         try:
             with open(pending_path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(data, ensure_ascii=False) + "\n")
-            self.set_status("Data disimpan ke antrian lokal. Integrasi database online bisa ditambahkan nanti.")
+            self.set_status("Data disimpan ke antrian lokal sebagai fallback.")
             messagebox.showinfo(
                 "Info",
                 (
-                    "Data disimpan sementara ke file lokal.\n"
-                    "Integrasi database online belum diaktifkan.\n\n"
+                    "Data disimpan sementara ke file lokal karena gagal ke Supabase.\n\n"
                     f"File: {pending_path}"
                 ),
             )
