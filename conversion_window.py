@@ -61,9 +61,27 @@ class ConversionWindow(tk.Toplevel):
         self.eye_cascade = self._load_cascade('haarcascade_eye.xml')
         self.nose_cascade = self._load_cascade('haarcascade_mcs_nose.xml')
 
+        self.colors = {
+            "bg_root": "#0B1D36",
+            "bg_main": "#0E2744",
+            "bg_panel": "#143457",
+            "bg_panel_inner": "#0F2A48",
+            "fg_primary": "#EAF2FF",
+            "fg_muted": "#B8CBE2",
+            "accent_blue": "#2D9CDB",
+            "accent_green": "#27AE60",
+            "accent_red": "#E74C3C",
+            "accent_orange": "#F2994A",
+            "accent_purple": "#9B59B6"
+        }
+
         self.title(f"Konversi Citra — {self.MODE_LABELS[conv_mode][0]}")
         self.geometry("1150x700")
-        self.configure(bg="#1E2A35")
+        self.configure(bg=self.colors["bg_root"])
+        try:
+            self.state("zoomed")
+        except:
+            pass
 
         self.setup_ui()
         self.start_camera()
@@ -71,60 +89,88 @@ class ConversionWindow(tk.Toplevel):
 
     # ───────────────── UI ─────────────────
     def setup_ui(self):
-        bg = "#1E2A35"
-        panel = "#2C3E50"
-        fg = "#ECF0F1"
+        bg = self.colors["bg_root"]
+        main_bg = self.colors["bg_main"]
+        panel = self.colors["bg_panel"]
+        inner = self.colors["bg_panel_inner"]
+        fg = self.colors["fg_primary"]
+        muted = self.colors["fg_muted"]
 
         main = tk.Frame(self, bg=bg)
-        main.pack(expand=True, fill="both", padx=15, pady=12)
+        main.pack(expand=True, fill="both", padx=12, pady=12)
+        main.grid_rowconfigure(2, weight=1)
+        main.grid_columnconfigure(0, weight=1)
 
-        tk.Label(main, text=f"KONVERSI CITRA — {self.MODE_LABELS[self.conv_mode][0]}",
-                 font=("Arial", 17, "bold"), bg=bg, fg="white").pack()
+        # ── Header ──
+        header = tk.Frame(main, bg=bg)
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+        tk.Label(header, text=f"KONVERSI CITRA — {self.MODE_LABELS[self.conv_mode][0]}",
+                 font=("Segoe UI", 16, "bold"), bg=bg, fg=fg).pack(pady=(0,5))
 
-        body = tk.Frame(main, bg=bg)
-        body.pack(expand=True, fill="both", pady=8)
+        # ── Main Area (Grid seragam) ──
+        body = tk.Frame(main, bg=main_bg, height=520)
+        body.grid(row=1, column=0, sticky="nsew", pady=8)
+        body.grid_propagate(False)
+        body.grid_rowconfigure(0, weight=1)
+        body.grid_columnconfigure(0, weight=1, uniform="panel") # Kiri
+        body.grid_columnconfigure(1, weight=1, uniform="panel") # Kanan
 
-        # ───── LIVE ─────
-        left = tk.Frame(body, bg=bg)
-        left.pack(side="left", expand=True, fill="both")
+        # KIRI: Live Camera
+        left = tk.Frame(body, bg=panel, bd=1, relief="solid")
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        left.grid_propagate(False)
 
-        tk.Label(left, text="KAMERA LIVE", bg=bg, fg="#3498DB",
-                 font=("Arial", 12, "bold")).pack()
+        tk.Label(left, text="KAMERA LIVE", font=("Segoe UI", 11, "bold"),
+                 bg=panel, fg=self.colors["accent_blue"]).pack(pady=8)
 
-        self.live_label = tk.Label(left, bg="black", text="Menghubungkan...",
-                                   fg="white", font=("Arial", 11))
-        self.live_label.pack(expand=True, fill="both", padx=6, pady=6)
+        self.live_wrap = tk.Frame(left, bg=inner, bd=1, relief="solid")
+        self.live_wrap.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self.live_wrap.pack_propagate(False)
 
-        # ───── CAPTURE + INFO ─────
-        right = tk.Frame(body, bg=panel, width=360)
-        right.pack(side="right", fill="y")
-        right.pack_propagate(False)
+        self.live_label = tk.Label(self.live_wrap, bg=inner, text="Menghubungkan...", fg=muted, font=("Segoe UI", 10))
+        self.live_label.pack(expand=True, fill="both")
 
-        tk.Label(right, text="HASIL CAPTURE", bg=panel, fg="#E67E22",
-                 font=("Arial", 12, "bold")).pack(pady=6)
+        # KANAN: Capture & Info
+        right = tk.Frame(body, bg=panel, bd=1, relief="solid")
+        right.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+        right.grid_propagate(False)
 
-        self.capture_label = tk.Label(right, bg="black",
-                                      text="Belum ada capture",
-                                      fg="#7F8C8D")
-        self.capture_label.pack(expand=True, fill="both", padx=8, pady=6)
+        tk.Label(right, text="HASIL CAPTURE", font=("Segoe UI", 11, "bold"),
+                 bg=panel, fg=self.colors["accent_orange"]).pack(pady=8)
 
-        info = tk.Frame(right, bg=panel)
-        info.pack(fill="x", padx=10, pady=6)
+        self.capture_wrap = tk.Frame(right, bg=inner, bd=1, relief="solid")
+        self.capture_wrap.pack(fill="both", expand=True, padx=8, pady=(0, 8))
+        self.capture_wrap.pack_propagate(False)
+        
+        self.capture_label = tk.Label(self.capture_wrap, bg=inner, text="Belum ada capture", fg=muted, font=("Segoe UI", 10))
+        self.capture_label.pack(expand=True, fill="both")
 
-        # ── INFO LABELS ──
-        self.lbl_jenis = tk.Label(info, text="Jenis   : -", bg=panel, fg=fg, anchor="w")
-        self.lbl_ukuran = tk.Label(info, text="Ukuran  : -", bg=panel, fg=fg, anchor="w")
-        self.lbl_type = tk.Label(info, text="Type    : -", bg=panel, fg=fg, anchor="w")
-        self.lbl_status = tk.Label(info, text="Status  : -", bg=panel, fg="#BDC3C7", anchor="w")
+        # INFO BAR & SLIDERS
+        info_area = tk.Frame(main, bg=bg)
+        info_area.grid(row=2, column=0, sticky="nsew", pady=(8, 0))
+        
+        info = tk.Frame(info_area, bg=panel, bd=1, relief="solid")
+        info.pack(fill="x", pady=(0, 8), ipady=4)
 
-        for lbl in (self.lbl_jenis, self.lbl_ukuran, self.lbl_type, self.lbl_status):
-            lbl.pack(fill="x")
+        # Labels info dalam grid horizontal
+        info_grid = tk.Frame(info, bg=panel)
+        info_grid.pack(fill="x", padx=10, pady=5)
+        for i in range(6):
+            info_grid.grid_columnconfigure(i, weight=1)
 
-        # baru: objek & wajah count
-        self.lbl_objects = tk.Label(info, text="Objek   : -", bg=panel, fg=fg, anchor="w")
-        self.lbl_people = tk.Label(info, text="Wajah   : -", bg=panel, fg=fg, anchor="w")
-        self.lbl_objects.pack(fill="x")
-        self.lbl_people.pack(fill="x")
+        self.lbl_jenis = tk.Label(info_grid, text="Jenis   : -", bg=panel, fg=fg, anchor="w", font=("Segoe UI", 9))
+        self.lbl_ukuran = tk.Label(info_grid, text="Ukuran  : -", bg=panel, fg=fg, anchor="w", font=("Segoe UI", 9))
+        self.lbl_type = tk.Label(info_grid, text="Type    : -", bg=panel, fg=fg, anchor="w", font=("Segoe UI", 9))
+        self.lbl_objects = tk.Label(info_grid, text="Objek   : -", bg=panel, fg=fg, anchor="w", font=("Segoe UI", 9))
+        self.lbl_people = tk.Label(info_grid, text="Wajah   : -", bg=panel, fg=fg, anchor="w", font=("Segoe UI", 9))
+        self.lbl_status = tk.Label(info_grid, text="Status  : -", bg=panel, fg=self.colors["accent_green"], anchor="w", font=("Segoe UI", 9, "bold"))
+        
+        self.lbl_jenis.grid(row=0, column=0, sticky="ew")
+        self.lbl_ukuran.grid(row=0, column=1, sticky="ew")
+        self.lbl_type.grid(row=0, column=2, sticky="ew")
+        self.lbl_objects.grid(row=0, column=3, sticky="ew")
+        self.lbl_people.grid(row=0, column=4, sticky="ew")
+        self.lbl_status.grid(row=0, column=5, sticky="ew")
 
         # slider biner
         if self.conv_mode == "gray_to_biner":
@@ -133,45 +179,28 @@ class ConversionWindow(tk.Toplevel):
                 info, from_=0, to=255, orient="horizontal",
                 variable=self.threshold,
                 command=self.on_threshold,
-                bg=panel, fg=fg, troughcolor="#BDC3C7"
+                bg=panel, fg=fg, troughcolor=inner, highlightthickness=0, label="Atur Nilai Threshold"
             )
-            self.slider.pack(fill="x", pady=6)
+            self.slider.pack(fill="x", pady=2, padx=10)
 
-        # buttons
-        btn = tk.Frame(main, bg=bg)
-        btn.pack(pady=6)
+        # Kumpulan Tombol Nav/Action
+        btn = tk.Frame(info_area, bg=bg)
+        btn.pack(pady=4)
 
-        tk.Button(btn, text="📸 Capture", command=self.capture,
-                  bg="#3498DB", fg="white", width=14).pack(side="left", padx=6)
+        tk.Button(btn, text="📸 Capture", command=self.capture, bg="#2980b9", fg="white", activebackground="#2471a3", activeforeground="white", font=("Segoe UI", 10, "bold"), width=12, cursor="hand2", relief="raised", bd=1).pack(side="left", padx=4)
+        tk.Button(btn, text=f"🔄 {self.MODE_LABELS[self.conv_mode][1]}", command=self.convert, bg="#E67E22", fg="white", activebackground="#D35400", activeforeground="white", font=("Segoe UI", 10, "bold"), width=18, cursor="hand2", relief="raised", bd=1).pack(side="left", padx=4)
+        tk.Button(btn, text="💾 Simpan", command=self.save, bg="#27AE60", fg="white", activebackground="#239B56", activeforeground="white", font=("Segoe UI", 10, "bold"), width=12, cursor="hand2", relief="raised", bd=1).pack(side="left", padx=4)
+        tk.Button(btn, text="🗑️ Hapus", command=self.delete_capture, bg="#E74C3C", fg="white", activebackground="#C0392B", activeforeground="white", font=("Segoe UI", 10, "bold"), width=12, cursor="hand2", relief="raised", bd=1).pack(side="left", padx=4)
 
-        tk.Button(btn, text=f"🔄 {self.MODE_LABELS[self.conv_mode][1]}",
-                  command=self.convert,
-                  bg="#E67E22", fg="white", width=20).pack(side="left", padx=6)
-
-        tk.Button(btn, text="💾 Simpan", command=self.save,
-                  bg="#27AE60", fg="white", width=14).pack(side="left", padx=6)
-
-        tk.Button(btn, text="🗑️ Hapus", command=self.delete_capture,
-                  bg="#E74C3C", fg="white", width=14).pack(side="left", padx=6)
-
-        # tambahan tombol: buka drive lokal, invert, resume live
-        extra = tk.Frame(main, bg=bg)
-        extra.pack(pady=6)
-        tk.Button(extra, text="📂 Buka Drive Lokal", command=self.open_local_image,
-                  bg="#16A085", fg="white", width=20).pack(side="left", padx=6)
-        tk.Button(extra, text="🔁 Invert", command=self.invert_image,
-                  bg="#9B59B6", fg="white", width=12).pack(side="left", padx=6)
-        tk.Button(extra, text="▶ Resume Live", command=self.resume_live,
-                  bg="#95A5A6", fg="white", width=12).pack(side="left", padx=6)
-        
-        tk.Button(extra, text="👤 Crop Orang", command=self.crop_person,
-                  bg="#E67E22", fg="white", width=14).pack(side="left", padx=6)
-        
-        tk.Button(extra, text="🎭 Hapus Background", command=self.remove_background,
-                  bg="#E74C3C", fg="white", width=18).pack(side="left", padx=6)
-        
-        tk.Button(extra, text="↔️ Geser Orang", command=self.move_person,
-                  bg="#9B59B6", fg="white", width=14).pack(side="left", padx=6)
+        extra = tk.Frame(info_area, bg=bg)
+        extra.pack(pady=4)
+        tk.Button(extra, text="📂 Buka Lokal", command=self.open_local_image, bg="#16A085", fg="white", font=("Segoe UI", 9, "bold"), width=14, cursor="hand2", bd=1).pack(side="left", padx=4)
+        tk.Button(extra, text="🔁 Invert", command=self.invert_image, bg="#9B59B6", fg="white", font=("Segoe UI", 9, "bold"), width=12, cursor="hand2", bd=1).pack(side="left", padx=4)
+        tk.Button(extra, text="▶ Resume Live", command=self.resume_live, bg="#95A5A6", fg="white", font=("Segoe UI", 9, "bold"), width=14, cursor="hand2", bd=1).pack(side="left", padx=4)
+        tk.Button(extra, text="👤 Crop Orang", command=self.crop_person, bg="#D35400", fg="white", font=("Segoe UI", 9, "bold"), width=14, cursor="hand2", bd=1).pack(side="left", padx=4)
+        tk.Button(extra, text="🎭 Hapus BG", command=self.remove_background, bg="#C0392B", fg="white", font=("Segoe UI", 9, "bold"), width=12, cursor="hand2", bd=1).pack(side="left", padx=4)
+        tk.Button(extra, text="↔️ Geser Orang", command=self.move_person, bg="#8E44AD", fg="white", font=("Segoe UI", 9, "bold"), width=14, cursor="hand2", bd=1).pack(side="left", padx=4)
+        tk.Button(extra, text="Tutup", command=self.close, bg=self.colors["bg_panel"], fg="white", font=("Segoe UI", 9, "bold"), width=10, cursor="hand2", bd=1).pack(side="left", padx=4)
 
     # ───────────────── CAMERA ─────────────────
     def start_camera(self):
@@ -195,19 +224,26 @@ class ConversionWindow(tk.Toplevel):
             self.after(30, self.update_camera)
             return
 
-        # keep original live preview
+        target_w = max(1, self.live_label.winfo_width())
+        target_h = max(1, self.live_label.winfo_height())
+        if target_w < 10 or target_h < 10:
+            self.after(33, self.update_camera)
+            return
+
         if self.conv_mode == "gray_to_biner":
             gray = frame if frame.ndim == 2 else cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            img = Image.fromarray(cv2.resize(gray, (500, 380)), mode="L")
+            rgb = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
+            rendered = self._resize_cover(rgb, target_w, target_h)
         else:
-            rgb = cv2.cvtColor(cv2.resize(frame, (500, 380)), cv2.COLOR_BGR2RGB)
-            img = Image.fromarray(rgb)
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            rendered = self._resize_cover(rgb, target_w, target_h)
 
+        img = Image.fromarray(rendered)
         photo = ImageTk.PhotoImage(img)
         self.live_label.configure(image=photo, text="")
         self.live_label.image = photo
 
-        self.after(30, self.update_camera)
+        self.after(33, self.update_camera)
 
     # ───────────────── ACTIONS ─────────────────
     def capture(self):
@@ -244,14 +280,13 @@ class ConversionWindow(tk.Toplevel):
         except Exception:
             self.gray_frame = None
 
-        # Tampilkan preview RGB/warna di capture_label (bukan grayscale)
-        # User akan convert ke grayscale nanti dengan tombol Convert
         if self.selected_source_bgr is not None:
-            self.show_image(self.selected_source_bgr, gray=False)
-            h, w = self.selected_source_bgr.shape[:2]
-            size_bytes = int(self.selected_source_bgr.size * self.selected_source_bgr.itemsize)
-            size_kb = size_bytes / 1024
-            self.update_info(self.selected_source_bgr, "Color", "Captured (belum dikonversi)")
+            if self.conv_mode == "gray_to_biner":
+                self.show_image(self.gray_frame, gray=True)
+                self.update_info(self.gray_frame, "Grayscale", "Captured")
+            else:
+                self.show_image(self.selected_source_bgr, gray=False)
+                self.update_info(self.selected_source_bgr, "Color", "Captured")
         else:
             self.update_info(np.array([]), "-", "Captured")
 
@@ -526,19 +561,31 @@ class ConversionWindow(tk.Toplevel):
                     cv2.rectangle(vis_bgr, (x, y), (x + w, y + h), (255, 0, 0), 2)  # biru
                     cv2.putText(vis_bgr, "Wajah", (x, y - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 1)
 
-            # resize preview to 320x240
-            vis_rgb = cv2.cvtColor(cv2.resize(vis_bgr, (320, 240)), cv2.COLOR_BGR2RGB)
-            img = Image.fromarray(vis_rgb)
+            target_w = max(1, self.capture_label.winfo_width())
+            target_h = max(1, self.capture_label.winfo_height())
+            if target_w < 10 or target_h < 10:
+                pass
+            
+            vis_rgb = cv2.cvtColor(vis_bgr, cv2.COLOR_BGR2RGB)
+            rendered = self._resize_cover(vis_rgb, target_w, target_h)
+
+            img = Image.fromarray(rendered)
             photo = ImageTk.PhotoImage(img)
             self.capture_label.configure(image=photo, text="")
             self.capture_label.image = photo
         except Exception as e:
-            # fallback: show without boxes
+            # fallback
             try:
-                if gray:
-                    img = Image.fromarray(arr, mode="L").resize((320,240))
+                target_w = max(1, self.capture_label.winfo_width())
+                target_h = max(1, self.capture_label.winfo_height())
+                
+                if arr.ndim == 2:
+                    bb = cv2.cvtColor(arr, cv2.COLOR_GRAY2RGB)
                 else:
-                    img = Image.fromarray(cv2.cvtColor(arr, cv2.COLOR_BGR2RGB)).resize((320,240))
+                    bb = cv2.cvtColor(arr, cv2.COLOR_BGR2RGB)
+                
+                rendered = self._resize_cover(bb, target_w, target_h)
+                img = Image.fromarray(rendered)
                 photo = ImageTk.PhotoImage(img)
                 self.capture_label.configure(image=photo, text="")
                 self.capture_label.image = photo
@@ -546,16 +593,44 @@ class ConversionWindow(tk.Toplevel):
                 pass
 
     def show_live_from_bgr(self, bgr):
-        # tampilkan gambar BGR pada live_label ukuran 500x380
+        # tampilkan gambar BGR pada live_label
         try:
-            h, w = bgr.shape[:2]
-            rgb = cv2.cvtColor(cv2.resize(bgr, (500, 380)), cv2.COLOR_BGR2RGB)
-            img = Image.fromarray(rgb)
+            target_w = max(1, self.live_label.winfo_width())
+            target_h = max(1, self.live_label.winfo_height())
+            if target_w < 10 or target_h < 10:
+                return
+            
+            rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+            rendered = self._resize_cover(rgb, target_w, target_h)
+
+            img = Image.fromarray(rendered)
             photo = ImageTk.PhotoImage(img)
             self.live_label.configure(image=photo, text="")
             self.live_label.image = photo
         except Exception as e:
             print("show_live_from_bgr error:", e)
+
+    def _resize_cover(self, rgb_image, target_w, target_h):
+        src_h, src_w = rgb_image.shape[:2]
+        if src_h <= 0 or src_w <= 0:
+            return rgb_image
+
+        ratio = max(target_w / float(src_w), target_h / float(src_h))
+        ratio = max(ratio, 1e-6)
+        new_w = max(1, int(src_w * ratio))
+        new_h = max(1, int(src_h * ratio))
+        interp = cv2.INTER_CUBIC if ratio > 1.0 else cv2.INTER_AREA
+        resized = cv2.resize(rgb_image, (new_w, new_h), interpolation=interp)
+
+        x0 = max(0, (new_w - target_w) // 2)
+        y0 = max(0, (new_h - target_h) // 2)
+        x1 = min(new_w, x0 + target_w)
+        y1 = min(new_h, y0 + target_h)
+
+        cropped = resized[y0:y1, x0:x1]
+        if cropped.shape[1] != target_w or cropped.shape[0] != target_h:
+            cropped = cv2.resize(cropped, (target_w, target_h), interpolation=cv2.INTER_AREA)
+        return cropped
 
     def update_info(self, arr, jenis, status):
         # arr adalah numpy array

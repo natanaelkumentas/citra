@@ -25,10 +25,32 @@ class AnalisisFilterWindow(tk.Toplevel):
         self.camera = None
         self.is_camera_running = False
         self.last_live_frame = None
+        self._filter_job = None
+
+        self.colors = {
+            "bg_root": "#0B1D36",
+            "bg_main": "#0E2744",
+            "bg_sidebar": "#112A46",
+            "bg_sidebar_btn": "#1B3B63",
+            "bg_panel": "#143457",
+            "bg_panel_inner": "#0F2A48",
+            "bg_desc": "#143457",
+            "fg_primary": "#EAF2FF",
+            "fg_muted": "#B8CBE2",
+            "accent_blue": "#2D9CDB",
+            "accent_orange": "#F2994A",
+            "btn_active": "#26517F",
+        }
+        self.padding = {"outer": 12, "gap": 8, "row": 6}
 
         self.title("Analisis Filter")
-        self.geometry("1380x820")
-        self.configure(bg="#ECF0F1")
+        self.geometry("1480x820")
+        self.configure(bg=self.colors["bg_root"])
+        self.minsize(1280, 700)
+        try:
+            self.state("zoomed")
+        except:
+            pass
 
         self.threshold_var = tk.IntVar(value=127)
         self.status_var = tk.StringVar(value="Status: Siap. Buka gambar atau aktifkan kamera.")
@@ -39,18 +61,31 @@ class AnalisisFilterWindow(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", self.close)
 
     def _build_ui(self):
-        root = tk.Frame(self, bg="#ECF0F1")
-        root.pack(fill="both", expand=True, padx=10, pady=10)
-        root.grid_columnconfigure(1, weight=1)
+        root = tk.Frame(self, bg=self.colors["bg_root"])
+        root.pack(
+            fill="both",
+            expand=True,
+            padx=self.padding["outer"],
+            pady=self.padding["outer"],
+        )
         root.grid_rowconfigure(0, weight=1)
+        root.grid_columnconfigure(1, weight=1)
 
         self._build_left_menu(root)
         self._build_main_area(root)
 
     def _build_left_menu(self, parent):
-        menu = tk.Frame(parent, bg="#2C3E50", width=170, bd=2, relief="solid")
-        menu.grid(row=0, column=0, sticky="nsw", padx=(0, 10))
-        menu.grid_propagate(False)
+        left_menu = tk.Frame(parent, bg=self.colors["bg_sidebar"], width=190, relief="solid", bd=1)
+        left_menu.grid(row=0, column=0, sticky="nsw", padx=(0, self.padding["gap"]))
+        left_menu.grid_propagate(False)
+
+        tk.Label(
+            left_menu,
+            text="ANALISIS FILTER",
+            bg=self.colors["bg_sidebar"],
+            fg=self.colors["fg_primary"],
+            font=("Segoe UI", 12, "bold"),
+        ).pack(fill="x", padx=12, pady=(14, 10))
 
         buttons = [
             ("Open", self.open_image),
@@ -71,75 +106,98 @@ class AnalisisFilterWindow(tk.Toplevel):
 
         for text, cmd in buttons:
             tk.Button(
-                menu,
+                left_menu,
                 text=text,
                 command=cmd,
-                font=("Arial", 10, "bold"),
-                bg="#ECF0F1",
-                fg="#111111",
-                width=17,
+                font=("Segoe UI", 10, "bold"),
+                bg=self.colors["bg_sidebar_btn"],
+                fg=self.colors["fg_primary"],
+                activebackground=self.colors["btn_active"],
+                activeforeground=self.colors["fg_primary"],
+                width=18,
                 relief="raised",
-                bd=2,
+                bd=1,
                 cursor="hand2",
-            ).pack(fill="x", padx=10, pady=4)
+            ).pack(fill="x", padx=12, pady=3, ipady=1)
 
     def _build_main_area(self, parent):
-        main = tk.Frame(parent, bg="#ECF0F1")
+        main = tk.Frame(parent, bg=self.colors["bg_main"])
         main.grid(row=0, column=1, sticky="nsew")
-        main.grid_columnconfigure(0, weight=1)
         main.grid_rowconfigure(0, weight=1)
+        main.grid_rowconfigure(1, weight=0)
+        main.grid_rowconfigure(2, weight=0)
+        main.grid_rowconfigure(3, weight=0)
+        main.grid_columnconfigure(0, weight=1)
 
-        image_wrap = tk.Frame(main, bg="#ECF0F1")
-        image_wrap.grid(row=0, column=0, sticky="nsew")
-        # Keep panel proportions stable so live preview size does not dominate layout.
-        image_wrap.grid_columnconfigure(0, weight=4, uniform="panel")
-        image_wrap.grid_columnconfigure(1, weight=4, uniform="panel")
-        image_wrap.grid_columnconfigure(2, weight=3, uniform="panel")
-        image_wrap.grid_rowconfigure(0, weight=1, minsize=520)
+        # Mengubah struktur grid image_wrap menjadi 2x2. Baris atas untuk image, baris bawah untuk Histogram.
+        image_wrap = tk.Frame(main, bg=self.colors["bg_main"])
+        image_wrap.grid(row=0, column=0, sticky="nsew", pady=(self.padding["gap"], self.padding["gap"]))
+        image_wrap.grid_rowconfigure(0, weight=1)
+        image_wrap.grid_rowconfigure(1, weight=1)
+        image_wrap.grid_columnconfigure(0, weight=1, uniform="panel")
+        image_wrap.grid_columnconfigure(1, weight=1, uniform="panel")
 
-        self.original_label = self._make_panel(image_wrap, 0, "Original", "Belum ada gambar")
-        self.result_label = self._make_panel(image_wrap, 1, "Hasil Filter", "Belum ada hasil")
-        self.hist_label = self._make_panel(image_wrap, 2, "Histogram", "Histogram belum tersedia")
+        self.original_label = self._make_panel(image_wrap, 0, 0, 1, "Original", "Belum ada gambar")
+        self.result_label = self._make_panel(image_wrap, 0, 1, 1, "Hasil Filter", "Belum ada hasil")
+        self.hist_label = self._make_panel(image_wrap, 1, 0, 2, "Histogram", "Histogram belum tersedia")
+        
         self.original_label.bind("<Configure>", self._on_original_resize)
         self.result_label.bind("<Configure>", self._on_result_resize)
         self.hist_label.bind("<Configure>", self._on_hist_resize)
 
-        camera_controls = tk.Frame(main, bg="#ECF0F1")
-        camera_controls.grid(row=1, column=0, sticky="ew", pady=(8, 6))
+        camera_controls = tk.Frame(main, bg=self.colors["bg_main"])
+        camera_controls.grid(row=1, column=0, sticky="ew", pady=(self.padding["row"], self.padding["row"]))
+        for i in range(4):
+            camera_controls.grid_columnconfigure(i, weight=1)
 
         self.capture_btn = tk.Button(
-            camera_controls, text="Capture", width=12, command=self.capture_camera, state="disabled"
+            camera_controls, text="Capture", 
+            command=self.capture_camera, state="disabled",
+            bg="#2980b9", fg="white", font=("Segoe UI", 10, "bold"), relief="raised", bd=1,
+            activebackground="#2471a3", activeforeground="white"
         )
-        self.capture_btn.pack(side="left", padx=4)
+        self.capture_btn.grid(row=0, column=0, padx=5, sticky="ew", ipady=4)
 
         self.save_capture_btn = tk.Button(
-            camera_controls, text="Simpan", width=12, command=self.save_camera_capture, state="disabled"
+            camera_controls, text="Simpan Capture", 
+            command=self.save_camera_capture, state="disabled",
+            bg="#27AE60", fg="white", font=("Segoe UI", 10, "bold"), relief="raised", bd=1,
+            activebackground="#239B56", activeforeground="white"
         )
-        self.save_capture_btn.pack(side="left", padx=4)
+        self.save_capture_btn.grid(row=0, column=1, padx=5, sticky="ew", ipady=4)
 
         self.delete_capture_btn = tk.Button(
-            camera_controls, text="Hapus", width=12, command=self.delete_capture, state="normal"
+            camera_controls, text="Hapus Data", 
+            command=self.delete_capture, state="normal",
+            bg="#E67E22", fg="white", font=("Segoe UI", 10, "bold"), relief="raised", bd=1,
+            activebackground="#D35400", activeforeground="white"
         )
-        self.delete_capture_btn.pack(side="left", padx=4)
+        self.delete_capture_btn.grid(row=0, column=2, padx=5, sticky="ew", ipady=4)
 
         self.close_camera_btn = tk.Button(
-            camera_controls, text="Tutup", width=12, command=self.close_camera, state="disabled"
+            camera_controls, text="Tutup Kamera", 
+            command=self.close_camera, state="disabled",
+            bg="#E74C3C", fg="white", font=("Segoe UI", 10, "bold"), relief="raised", bd=1,
+            activebackground="#C0392B", activeforeground="white"
         )
-        self.close_camera_btn.pack(side="left", padx=4)
+        self.close_camera_btn.grid(row=0, column=3, padx=5, sticky="ew", ipady=4)
 
         threshold_box = tk.LabelFrame(
             main,
             text="Threshold",
-            font=("Arial", 10, "bold"),
-            bg="#ECF0F1",
-            fg="#2C3E50",
+            font=("Segoe UI", 11, "bold"),
+            bg=self.colors["bg_panel"],
+            fg=self.colors["fg_primary"],
+            bd=1,
+            relief="solid",
         )
-        threshold_box.grid(row=2, column=0, sticky="ew")
+        threshold_box.grid(row=2, column=0, sticky="ew", pady=(5, 5))
 
         self.threshold_value_label = tk.Label(
-            threshold_box, text="127", bg="#ECF0F1", fg="#2C3E50", width=5, anchor="w"
+            threshold_box, text="127", bg=self.colors["bg_panel"], fg=self.colors["fg_primary"], 
+            width=5, anchor="w", font=("Segoe UI", 10, "bold")
         )
-        self.threshold_value_label.pack(anchor="w", padx=8, pady=(2, 0))
+        self.threshold_value_label.pack(side="left", padx=10, pady=5)
 
         self.threshold_scale = tk.Scale(
             threshold_box,
@@ -149,41 +207,51 @@ class AnalisisFilterWindow(tk.Toplevel):
             variable=self.threshold_var,
             command=self.on_threshold_change,
             length=700,
-            bg="#ECF0F1",
+            bg=self.colors["bg_panel"],
+            fg=self.colors["fg_primary"],
+            troughcolor=self.colors["bg_panel_inner"],
             highlightthickness=0,
             state="disabled",
+            showvalue=0, # hide default scale text value since we have custom label
         )
-        self.threshold_scale.pack(fill="x", padx=8, pady=(0, 8))
+        self.threshold_scale.pack(side="left", fill="x", expand=True, padx=10, pady=5)
 
         tk.Label(
             main,
             textvariable=self.status_var,
             anchor="w",
-            bg="#ECF0F1",
-            fg="#2C3E50",
-            font=("Arial", 10, "italic"),
-        ).grid(row=3, column=0, sticky="ew", pady=(8, 0))
+            bg=self.colors["bg_main"],
+            fg=self.colors["fg_muted"],
+            font=("Segoe UI", 10, "italic"),
+        ).grid(row=3, column=0, sticky="ew", pady=(5, 0))
 
-    def _make_panel(self, parent, col, title, text):
-        box = tk.LabelFrame(
+    def _make_panel(self, parent, row, col, colspan, title, empty_text):
+        panel = tk.LabelFrame(
             parent,
             text=title,
-            bg="#D0D3D4",
-            fg="#111111",
-            font=("Arial", 11, "bold"),
-            bd=2,
+            bg=self.colors["bg_panel"],
+            fg=self.colors["fg_primary"],
+            font=("Segoe UI", 11, "bold"),
+            bd=1,
             relief="solid",
         )
-        box.grid(row=0, column=col, sticky="nsew", padx=5, pady=5)
-        box.grid_propagate(False)
+        panel.grid(
+            row=row,
+            column=col,
+            columnspan=colspan,
+            sticky="nsew",
+            padx=(0 if col == 0 else self.padding["gap"]/2, 0 if col == 1 or colspan == 2 else self.padding["gap"]/2),
+            pady=(0 if row == 0 else self.padding["gap"], 0),
+        )
+        panel.grid_propagate(False)
 
         label = tk.Label(
-            box,
-            bg="black" if title != "Histogram" else "white",
-            fg="white" if title != "Histogram" else "#333333",
-            text=text,
+            panel,
+            text=empty_text,
+            bg=self.colors["bg_panel_inner"],
+            fg=self.colors["fg_primary"],
             anchor="center",
-            font=("Arial", 10),
+            font=("Segoe UI", 10),
         )
         label.pack(fill="both", expand=True)
         return label
@@ -273,9 +341,6 @@ class AnalisisFilterWindow(tk.Toplevel):
         if ret and frame is not None:
             self.last_live_frame = frame.copy()
             self.show_image(self.original_label, frame)
-            if self.source_image is None:
-                self.show_image(self.result_label, frame)
-                self.show_histogram(frame)
 
         self.after(30, self._update_camera_loop)
 
@@ -350,6 +415,11 @@ class AnalisisFilterWindow(tk.Toplevel):
 
     def on_threshold_change(self, _value):
         self._update_threshold_label()
+        if hasattr(self, '_filter_job') and self._filter_job is not None:
+            self.after_cancel(self._filter_job)
+        self._filter_job = self.after(200, self._apply_current_filter_delayed)
+
+    def _apply_current_filter_delayed(self):
         if self.source_image is not None and self.current_filter is not None:
             self.apply_filter(self.current_filter)
 
@@ -420,13 +490,23 @@ class AnalisisFilterWindow(tk.Toplevel):
 
             elif filter_name == "Segmentasi Warna":
                 k = max(2, min(8, 2 + (t // 32)))
-                pixels = src.reshape((-1, 3)).astype(np.float32)
-                criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 12, 1.0)
+                h, w = src.shape[:2]
+                scale = 400.0 / max(w, h, 1)
+                if scale < 1.0:
+                    small = cv2.resize(src, (int(w * scale), int(h * scale)))
+                else:
+                    small = src
+                pixels = small.reshape((-1, 3)).astype(np.float32)
+                criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
                 _, labels, centers = cv2.kmeans(
-                    pixels, k, None, criteria, 10, cv2.KMEANS_PP_CENTERS
+                    pixels, k, None, criteria, 3, cv2.KMEANS_PP_CENTERS
                 )
                 centers = np.uint8(centers)
-                result = centers[labels.flatten()].reshape(src.shape)
+                res_small = centers[labels.flatten()].reshape(small.shape)
+                if scale < 1.0:
+                    result = cv2.resize(res_small, (w, h), interpolation=cv2.INTER_NEAREST)
+                else:
+                    result = res_small
 
             elif filter_name == "Dwi Aras":
                 _, result = cv2.threshold(gray, t, 255, cv2.THRESH_BINARY)
@@ -543,18 +623,19 @@ class AnalisisFilterWindow(tk.Toplevel):
         if src_h <= 0 or src_w <= 0:
             return rgb_image
 
-        scale = max(target_w / max(1, src_w), target_h / max(1, src_h))
-        new_w = max(1, int(src_w * scale))
-        new_h = max(1, int(src_h * scale))
-        interp = cv2.INTER_CUBIC if scale > 1.0 else cv2.INTER_AREA
+        ratio = max(target_w / float(src_w), target_h / float(src_h))
+        ratio = max(ratio, 1e-6)
+        new_w = max(1, int(src_w * ratio))
+        new_h = max(1, int(src_h * ratio))
+        interp = cv2.INTER_CUBIC if ratio > 1.0 else cv2.INTER_AREA
         resized = cv2.resize(rgb_image, (new_w, new_h), interpolation=interp)
 
         x0 = max(0, (new_w - target_w) // 2)
         y0 = max(0, (new_h - target_h) // 2)
         x1 = min(new_w, x0 + target_w)
         y1 = min(new_h, y0 + target_h)
-        cropped = resized[y0:y1, x0:x1]
 
+        cropped = resized[y0:y1, x0:x1]
         if cropped.shape[1] != target_w or cropped.shape[0] != target_h:
             cropped = cv2.resize(cropped, (target_w, target_h), interpolation=cv2.INTER_AREA)
         return cropped
@@ -568,14 +649,10 @@ class AnalisisFilterWindow(tk.Toplevel):
     def _on_result_resize(self, _event):
         if self.result_image is not None:
             self.show_image(self.result_label, self.result_image)
-        elif self.is_camera_running and self.last_live_frame is not None and self.source_image is None:
-            self.show_image(self.result_label, self.last_live_frame)
 
     def _on_hist_resize(self, _event):
         if self.result_image is not None:
             self.show_histogram(self.result_image)
-        elif self.is_camera_running and self.last_live_frame is not None and self.source_image is None:
-            self.show_histogram(self.last_live_frame)
 
     def _imread_unicode(self, path):
         try:

@@ -28,76 +28,114 @@ class CameraWindow(tk.Toplevel):
         self.use_internal = use_internal
         self.camera_url = camera_url or "http://172.29.241.86:8081/video"
 
+        self.colors = {
+            "bg_root": "#0B1D36",
+            "bg_main": "#0E2744",
+            "bg_panel": "#143457",
+            "bg_panel_inner": "#0F2A48",
+            "fg_primary": "#EAF2FF",
+            "fg_muted": "#B8CBE2",
+            "accent_blue": "#2D9CDB",
+            "accent_green": "#27AE60",
+            "accent_red": "#E74C3C"
+        }
+
         self.title("Window Buka Kamera")
-        self.geometry("1000x650")
-        self.configure(bg="#34495E")
+        self.geometry("1100x680")
+        self.configure(bg=self.colors["bg_root"])
+        try:
+            self.state("zoomed")
+        except:
+            pass
 
         self.setup_ui()
         self.start_camera()
         self.protocol("WM_DELETE_WINDOW", self.close)
 
     def setup_ui(self):
-        main_frame = tk.Frame(self, bg="#34495E")
-        main_frame.pack(expand=True, fill="both", padx=20, pady=20)
+        root = tk.Frame(self, bg=self.colors["bg_root"])
+        root.pack(fill="both", expand=True, padx=12, pady=12)
+        root.grid_rowconfigure(1, weight=1)
+        root.grid_columnconfigure(0, weight=1)
 
-        tk.Label(main_frame, text="KAMERA LIVE & CAPTURE",
-                 font=("Arial", 18, "bold"), bg="#34495E", fg="white").pack(pady=(0, 5))
+        # ── Header ──
+        header = tk.Frame(root, bg=self.colors["bg_root"])
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 8))
 
-        # URL bar
-        url_frame = tk.Frame(main_frame, bg="#34495E")
-        url_frame.pack(pady=5)
-        tk.Label(url_frame, text="IP Camera URL:", font=("Arial", 10),
-                 bg="#34495E", fg="#ECF0F1").pack(side="left", padx=5)
-        self.url_entry = tk.Entry(url_frame, font=("Arial", 10), width=40,
-                                  bg="#2C3E50", fg="white", insertbackground="white")
+        tk.Label(header, text="KAMERA LIVE & CAPTURE", font=("Segoe UI", 16, "bold"),
+                 bg=self.colors["bg_root"], fg=self.colors["fg_primary"]).pack(pady=(0,5))
+        
+        top_bar = tk.Frame(header, bg=self.colors["bg_root"])
+        top_bar.pack()
+        tk.Label(top_bar, text="IP Camera URL:", font=("Segoe UI", 10, "bold"),
+                 bg=self.colors["bg_root"], fg=self.colors["fg_muted"]).pack(side="left", padx=5)
+        self.url_entry = tk.Entry(top_bar, font=("Segoe UI", 10), width=40,
+                                  bg=self.colors["bg_panel_inner"], fg=self.colors["fg_primary"], insertbackground="white", bd=1)
         self.url_entry.insert(0, self.camera_url if not self.use_internal else "KAMERA INTERNAL (index 0)")
         self.url_entry.pack(side="left", padx=5)
         if self.use_internal:
             self.url_entry.configure(state='disabled')
-        tk.Button(url_frame, text="🔄 Hubungkan Ulang",
-                  command=self.reconnect_camera, font=("Arial", 9, "bold"),
-                  bg="#9B59B6", fg="white", cursor="hand2").pack(side="left", padx=5)
+        tk.Button(top_bar, text="🔄 Hubungkan Ulang", command=self.reconnect_camera,
+                  font=("Segoe UI", 9, "bold"), bg="#8E44AD", fg="white", cursor="hand2", relief="raised", bd=1).pack(side="left", padx=5)
 
-        # ── kiri: live  |  kanan: capture ──
-        camera_frame = tk.Frame(main_frame, bg="#34495E")
-        camera_frame.pack(pady=10, fill="both", expand=True)
+        # ── Main Area ──
+        main = tk.Frame(root, bg=self.colors["bg_main"])
+        main.grid(row=1, column=0, sticky="nsew")
+        main.grid_rowconfigure(0, weight=0)
+        main.grid_rowconfigure(1, weight=0)
+        main.grid_columnconfigure(0, weight=1)
 
-        left_frame = tk.Frame(camera_frame, bg="#34495E")
-        left_frame.pack(side="left", padx=10, fill="both", expand=True)
-        tk.Label(left_frame, text="KAMERA LIVE", font=("Arial", 12, "bold"),
-                 bg="#34495E", fg="#3498DB").pack()
-        self.live_label = tk.Label(left_frame, bg="black",
-                                   text="Menghubungkan ke Kamera...", fg="white")
-        self.live_label.pack(pady=5, fill="both", expand=True)
+        # ── Container Kamera Kaku (Fixed Height 500) ──
+        preview_wrap = tk.Frame(main, bg=self.colors["bg_main"], height=520)
+        preview_wrap.grid(row=0, column=0, sticky="ew", pady=(12, 12))
+        preview_wrap.grid_propagate(False)
+        preview_wrap.grid_rowconfigure(0, weight=1)
+        preview_wrap.grid_columnconfigure(0, weight=1, uniform="panel")
+        preview_wrap.grid_columnconfigure(1, weight=1, uniform="panel")
 
-        right_frame = tk.Frame(camera_frame, bg="#34495E")
-        right_frame.pack(side="right", padx=10, fill="both", expand=True)
-        tk.Label(right_frame, text="HASIL CAPTURE", font=("Arial", 12, "bold"),
-                 bg="#34495E", fg="#E67E22").pack()
-        self.capture_label = tk.Label(right_frame, bg="black",
-                                      text="Belum ada capture", fg="white")
-        self.capture_label.pack(pady=5, fill="both", expand=True)
+        self.live_label = self._make_panel(preview_wrap, 0, "KAMERA LIVE", "Menghubungkan ke Kamera...")
+        self.capture_label = self._make_panel(preview_wrap, 1, "HASIL CAPTURE", "Belum ada capture")
 
-        # log
-        self.info_log_label = tk.Label(main_frame, text="", font=("Arial", 11, "bold"),
-                                       bg="#34495E", fg="#2ECC71", height=2)
-        self.info_log_label.pack(pady=5)
+        self.live_label.bind("<Configure>", lambda _e: self._refresh_image_panels())
+        self.capture_label.bind("<Configure>", lambda _e: self._refresh_image_panels())
 
-        # tombol
-        button_frame = tk.Frame(main_frame, bg="#34495E")
-        button_frame.pack(pady=10)
-        for txt, cmd, clr in [("📸 Capture", self.capture_image, "#3498DB"),
-                              ("💾 Simpan", self.save_image, "#27AE60"),
-                              ("🗑️ Hapus", self.delete_capture, "#E74C3C")]:
-            tk.Button(button_frame, text=txt, command=cmd,
-                      font=("Arial", 12, "bold"), bg=clr, fg="white",
-                      width=15, height=2, cursor="hand2").pack(side="left", padx=10)
+        self.info_log_label = tk.Label(main, text="", font=("Segoe UI", 11, "bold"),
+                                       bg=self.colors["bg_main"], fg=self.colors["accent_green"], height=2)
+        self.info_log_label.grid(row=1, column=0, sticky="ew", pady=5)
 
-        tk.Button(main_frame, text="← Kembali ke Halaman Utama",
-                  command=self.close, font=("Arial", 11, "bold"),
-                  bg="#95A5A6", fg="white", width=30, height=1,
-                  cursor="hand2").pack(pady=10)
+        # ── Tombol Bawah (Serasi) ──
+        button_row = tk.Frame(main, bg=self.colors["bg_main"])
+        button_row.grid(row=2, column=0, sticky="ew", pady=(10, 0))
+        for i in range(4):
+            button_row.grid_columnconfigure(i, weight=1)
 
+        tk.Button(button_row, text="📸 Capture", command=self.capture_image,
+                  font=("Segoe UI", 11, "bold"), bg="#2980b9", fg="white", activebackground="#2471a3", activeforeground="white",
+                  bd=1, relief="raised", cursor="hand2").grid(row=0, column=0, padx=(0, 5), sticky="ew", ipady=4)
+
+        tk.Button(button_row, text="💾 Simpan", command=self.save_image,
+                  font=("Segoe UI", 11, "bold"), bg="#27AE60", fg="white", activebackground="#239B56", activeforeground="white",
+                  bd=1, relief="raised", cursor="hand2").grid(row=0, column=1, padx=5, sticky="ew", ipady=4)
+
+        tk.Button(button_row, text="🗑️ Hapus", command=self.delete_capture,
+                  font=("Segoe UI", 11, "bold"), bg="#E74C3C", fg="white", activebackground="#C0392B", activeforeground="white",
+                  bd=1, relief="raised", cursor="hand2").grid(row=0, column=2, padx=5, sticky="ew", ipady=4)
+
+        tk.Button(button_row, text="Tutup Halaman", command=self.close,
+                  font=("Segoe UI", 11, "bold"), bg=self.colors["bg_panel"], fg="white", activebackground="#26517F", activeforeground="white",
+                  bd=1, relief="raised", cursor="hand2").grid(row=0, column=3, padx=(5, 0), sticky="ew", ipady=4)
+
+    def _make_panel(self, parent, col, title, empty_text):
+        panel = tk.LabelFrame(parent, text=title, bg=self.colors["bg_panel"], fg=self.colors["fg_primary"], font=("Segoe UI", 11, "bold"), bd=1, relief="solid")
+        panel.grid(row=0, column=col, sticky="nsew", padx=(0 if col == 0 else 8, 0))
+        panel.grid_propagate(False)
+        label = tk.Label(panel, text=empty_text, bg=self.colors["bg_panel_inner"], fg=self.colors["fg_primary"], font=("Segoe UI", 10))
+        label.pack(fill="both", expand=True)
+        return label
+
+    def _refresh_image_panels(self):
+        if self.captured_frame is not None:
+            self._display_capture()
     # ── kamera ──
     def start_camera(self):
         try:
@@ -145,11 +183,16 @@ class CameraWindow(tk.Toplevel):
                 else:
                     display_frame = frame
 
-                h, w = display_frame.shape[:2]
-                ratio = min(450 / w, 400 / h)
-                nw, nh = int(w * ratio), int(h * ratio)
-                rgb = cv2.cvtColor(cv2.resize(display_frame, (nw, nh)), cv2.COLOR_BGR2RGB)
-                photo = ImageTk.PhotoImage(Image.fromarray(rgb))
+                target_w = max(1, self.live_label.winfo_width())
+                target_h = max(1, self.live_label.winfo_height())
+                if target_w < 10 or target_h < 10:
+                    self.after(33, self.update_camera)
+                    return
+                
+                rgb = cv2.cvtColor(display_frame, cv2.COLOR_BGR2RGB)
+                rendered = self._resize_cover(rgb, target_w, target_h)
+                photo = ImageTk.PhotoImage(Image.fromarray(rendered))
+
                 self.live_label.configure(image=photo, text="")
                 self.live_label.image = photo
             self.after(33, self.update_camera)
@@ -173,12 +216,8 @@ class CameraWindow(tk.Toplevel):
                     bgr_frame = frame.copy()
 
                 self.captured_frame = bgr_frame
-                h, w = bgr_frame.shape[:2]
-                ratio = min(450 / w, 400 / h)
-                rgb = cv2.cvtColor(cv2.resize(bgr_frame, (int(w * ratio), int(h * ratio))), cv2.COLOR_BGR2RGB)
-                photo = ImageTk.PhotoImage(Image.fromarray(rgb))
-                self.capture_label.configure(image=photo, text="")
-                self.capture_label.image = photo
+
+                self._display_capture()
                 self.show_log("✅ Gambar berhasil di-capture!", "#2ECC71")
             else:
                 self.show_log("❌ Gagal mengambil gambar", "#E74C3C")
@@ -236,5 +275,41 @@ class CameraWindow(tk.Toplevel):
             except Exception:
                 pass
         self.destroy()
+
+    def _display_capture(self):
+        if self.captured_frame is None:
+            return
+        target_w = max(1, self.capture_label.winfo_width())
+        target_h = max(1, self.capture_label.winfo_height())
+        if target_w < 10 or target_h < 10:
+            return
+            
+        rgb = cv2.cvtColor(self.captured_frame, cv2.COLOR_BGR2RGB)
+        rendered = self._resize_cover(rgb, target_w, target_h)
+        photo = ImageTk.PhotoImage(Image.fromarray(rendered))
+        self.capture_label.configure(image=photo, text="")
+        self.capture_label.image = photo
+
+    def _resize_cover(self, rgb_image, target_w, target_h):
+        src_h, src_w = rgb_image.shape[:2]
+        if src_h <= 0 or src_w <= 0:
+            return rgb_image
+
+        ratio = max(target_w / float(src_w), target_h / float(src_h))
+        ratio = max(ratio, 1e-6)
+        new_w = max(1, int(src_w * ratio))
+        new_h = max(1, int(src_h * ratio))
+        interp = cv2.INTER_CUBIC if ratio > 1.0 else cv2.INTER_AREA
+        resized = cv2.resize(rgb_image, (new_w, new_h), interpolation=interp)
+
+        x0 = max(0, (new_w - target_w) // 2)
+        y0 = max(0, (new_h - target_h) // 2)
+        x1 = min(new_w, x0 + target_w)
+        y1 = min(new_h, y0 + target_h)
+
+        cropped = resized[y0:y1, x0:x1]
+        if cropped.shape[1] != target_w or cropped.shape[0] != target_h:
+            cropped = cv2.resize(cropped, (target_w, target_h), interpolation=cv2.INTER_AREA)
+        return cropped
 
 

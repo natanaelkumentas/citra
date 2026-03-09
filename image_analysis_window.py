@@ -48,9 +48,26 @@ class ImageAnalysisWindow(tk.Toplevel):
         self.show_green = tk.BooleanVar(value=True)
         self.show_blue = tk.BooleanVar(value=True)
 
+        self.colors = {
+            "bg_root": "#0B1D36",
+            "bg_main": "#0E2744",
+            "bg_panel": "#143457",
+            "bg_panel_inner": "#0F2A48",
+            "fg_primary": "#EAF2FF",
+            "fg_muted": "#B8CBE2",
+            "accent_blue": "#2D9CDB",
+            "accent_green": "#27AE60",
+            "accent_red": "#E74C3C",
+            "accent_orange": "#F2994A"
+        }
+
         self.title("Analisis Citra")
-        self.geometry("1380x860")
-        self.configure(bg="#ECF0F1")
+        self.geometry("1400x880")
+        self.configure(bg=self.colors["bg_root"])
+        try:
+            self.state("zoomed")
+        except:
+            pass
 
         self.setup_ui()
         self.refresh_db_table()
@@ -58,159 +75,128 @@ class ImageAnalysisWindow(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", self.close)
 
     def setup_ui(self):
-        root_frame = tk.Frame(self, bg="#ECF0F1")
-        root_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        root_frame = tk.Frame(self, bg=self.colors["bg_root"])
+        root_frame.pack(fill="both", expand=True, padx=12, pady=12)
 
+        root_frame.grid_columnconfigure(0, weight=1)
+        root_frame.grid_rowconfigure(1, weight=2) # top_content (kamera & hist)
+        root_frame.grid_rowconfigure(2, weight=0) # stat box
+        root_frame.grid_rowconfigure(3, weight=1) # db box
+        root_frame.grid_rowconfigure(4, weight=0) # buttons
+
+        # ── HEADER ──
+        header = tk.Frame(root_frame, bg=self.colors["bg_root"])
+        header.grid(row=0, column=0, sticky="ew", pady=(0, 6))
         tk.Label(
-            root_frame,
-            text="DASHBOARD ANALISIS CITRA",
-            font=("Arial", 18, "bold"),
-            bg="#ECF0F1",
-            fg="#2C3E50"
-        ).pack(anchor="center", pady=(0, 10))
+            header, text="DASHBOARD ANALISIS CITRA",
+            font=("Segoe UI", 16, "bold"), bg=self.colors["bg_root"], fg=self.colors["fg_primary"]
+        ).pack(anchor="center")
 
-        top_content = tk.Frame(root_frame, bg="#ECF0F1")
-        top_content.pack(fill="x")
-        top_content.grid_columnconfigure(0, weight=1)
-        top_content.grid_columnconfigure(1, weight=1)
+        # ── TOP CONTENT (Live Camera & Histogram) ──
+        top_content = tk.Frame(root_frame, bg=self.colors["bg_root"], height=400)
+        top_content.grid(row=1, column=0, sticky="nsew", pady=4)
+        top_content.grid_propagate(False)
+        top_content.grid_rowconfigure(0, weight=1)
+        top_content.grid_columnconfigure(0, weight=1, uniform="panel")
+        top_content.grid_columnconfigure(1, weight=1, uniform="panel")
 
+        # KIRI (Kamera)
         left = tk.LabelFrame(
-            top_content,
-            text="Citra live foto/take foto",
-            font=("Arial", 11, "bold"),
-            bg="#D0D3D4",
-            fg="#111111",
-            relief="solid",
-            bd=2
+            top_content, text="Citra Live / Take Foto", font=("Segoe UI", 11, "bold"),
+            bg=self.colors["bg_main"], fg=self.colors["accent_blue"], relief="solid", bd=1
         )
-        left.grid(row=0, column=0, sticky="nsew", padx=(0, 8), pady=(0, 8))
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        left.grid_propagate(False)
+
+        self.live_wrap = tk.Frame(left, bg=self.colors["bg_panel_inner"], bd=1, relief="solid")
+        self.live_wrap.pack(fill="both", expand=True, padx=6, pady=6)
+        self.live_wrap.pack_propagate(False)
 
         self.live_label = tk.Label(
-            left, bg="black", fg="white",
+            self.live_wrap, bg=self.colors["bg_panel_inner"], fg=self.colors["fg_muted"], font=("Segoe UI", 10),
             text="Menunggu kamera..."
         )
-        self.live_label.pack(fill="both", expand=True, padx=8, pady=8)
+        self.live_label.pack(fill="both", expand=True)
 
+        # KANAN (Histogram)
         hist_box = tk.LabelFrame(
-            top_content,
-            text="Histogram beserta nilai peak chart",
-            font=("Arial", 11, "bold"),
-            bg="#D0D3D4",
-            fg="#111111",
-            relief="solid",
-            bd=2
+            top_content, text="Histogram beserta Nilai Peak", font=("Segoe UI", 11, "bold"),
+            bg=self.colors["bg_main"], fg="#E67E22", relief="solid", bd=1
         )
-        hist_box.grid(row=0, column=1, sticky="nsew", padx=(8, 0), pady=(0, 8))
+        hist_box.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
+        hist_box.grid_propagate(False)
 
         self.hist_label = tk.Label(
-            hist_box, bg="white", text="Histogram akan tampil setelah capture"
+            hist_box, bg=self.colors["bg_panel_inner"], fg=self.colors["fg_muted"], font=("Segoe UI", 10),
+            text="Histogram akan tampil setelah capture"
         )
-        self.hist_label.pack(fill="both", expand=True, padx=8, pady=(8, 4))
+        self.hist_label.pack(fill="both", expand=True, padx=6, pady=(6, 2))
 
-        chk_frame = tk.Frame(hist_box, bg="#D0D3D4")
-        chk_frame.pack(anchor="center", padx=8, pady=(2, 2))
-        tk.Checkbutton(
-            chk_frame, text="Merah (R)", variable=self.show_red,
-            bg="#D0D3D4", command=self.refresh_histogram_display
-        ).pack(side="left", padx=(0, 8))
-        tk.Checkbutton(
-            chk_frame, text="Hijau (G)", variable=self.show_green,
-            bg="#D0D3D4", command=self.refresh_histogram_display
-        ).pack(side="left", padx=(0, 8))
-        tk.Checkbutton(
-            chk_frame, text="Biru (B)", variable=self.show_blue,
-            bg="#D0D3D4", command=self.refresh_histogram_display
-        ).pack(side="left")
+        chk_frame = tk.Frame(hist_box, bg=self.colors["bg_main"])
+        chk_frame.pack(anchor="center", padx=6, pady=2)
+        tk.Checkbutton(chk_frame, text="Merah (R)", variable=self.show_red, bg=self.colors["bg_main"], fg=self.colors["fg_primary"], selectcolor=self.colors["bg_panel"], activebackground=self.colors["bg_main"], activeforeground=self.colors["fg_primary"], command=self.refresh_histogram_display).pack(side="left", padx=(0, 6))
+        tk.Checkbutton(chk_frame, text="Hijau (G)", variable=self.show_green, bg=self.colors["bg_main"], fg=self.colors["fg_primary"], selectcolor=self.colors["bg_panel"], activebackground=self.colors["bg_main"], activeforeground=self.colors["fg_primary"], command=self.refresh_histogram_display).pack(side="left", padx=(0, 6))
+        tk.Checkbutton(chk_frame, text="Biru (B)", variable=self.show_blue, bg=self.colors["bg_main"], fg=self.colors["fg_primary"], selectcolor=self.colors["bg_panel"], activebackground=self.colors["bg_main"], activeforeground=self.colors["fg_primary"], command=self.refresh_histogram_display).pack(side="left")
 
         self.rgb_percent_info = tk.Label(
-            hist_box,
-            text="Rasio warna RGB: R - | G - | B -",
-            bg="#D0D3D4",
-            fg="#111111",
-            font=("Arial", 10, "bold"),
-            anchor="center"
+            hist_box, text="Rasio warna RGB: R - | G - | B -", bg=self.colors["bg_main"], fg=self.colors["fg_primary"], font=("Segoe UI", 9, "bold"), anchor="center"
         )
-        self.rgb_percent_info.pack(fill="x", padx=8, pady=(0, 2))
+        self.rgb_percent_info.pack(fill="x", padx=6, pady=(0, 2))
 
         self.peak_label = tk.Label(
-            hist_box,
-            text="Peak keabuan dan RGB: -",
-            justify="left",
-            anchor="w",
-            bg="#D0D3D4",
-            fg="#111111",
-            font=("Arial", 10)
+            hist_box, text="Peak keabuan dan RGB: -", justify="left", anchor="w", bg=self.colors["bg_main"], fg=self.colors["fg_muted"], font=("Segoe UI", 9)
         )
-        self.peak_label.pack(fill="x", padx=8, pady=(0, 8))
+        self.peak_label.pack(fill="x", padx=6, pady=(0, 4))
 
+        # ── STATISTIK ──
         stat_box = tk.LabelFrame(
-            root_frame, text="Statistik Citra",
-            font=("Arial", 11, "bold"),
-            bg="#ECF0F1", fg="#2C3E50"
+            root_frame, text="Statistik Citra", font=("Segoe UI", 11, "bold"),
+            bg=self.colors["bg_main"], fg=self.colors["fg_primary"], relief="solid", bd=1
         )
-        stat_box.pack(fill="x", pady=(0, 8))
+        stat_box.grid(row=2, column=0, sticky="ew", pady=4, ipadx=4, ipady=4)
 
         self.stat_labels = {}
-        fields = [
-            ("nama_citra", "Nama Citra"),
-            ("skewness", "Skewness"),
-            ("average", "Average"),
-            ("std", "Std"),
-            ("kurtosis", "Kurtosis"),
-        ]
-        for key, label in fields:
-            row = tk.Frame(stat_box, bg="#ECF0F1")
-            row.pack(fill="x", padx=8, pady=2)
-            tk.Label(
-                row, text=f"{label:<12}", width=14, anchor="w",
-                bg="#ECF0F1", fg="#2C3E50", font=("Arial", 10, "bold")
-            ).pack(side="left")
-            value_lbl = tk.Label(
-                row, text="-", anchor="w",
-                bg="#ECF0F1", fg="#2C3E50", font=("Arial", 10)
-            )
-            value_lbl.pack(side="left", fill="x", expand=True)
+        fields = [("nama_citra", "Nama Citra"), ("skewness", "Skewness"), ("average", "Average"), ("std", "Std"), ("kurtosis", "Kurtosis")]
+        
+        # Grid format for statistics for horizontal compactness
+        stat_grid = tk.Frame(stat_box, bg=self.colors["bg_main"])
+        stat_grid.pack(fill="x", padx=6)
+        
+        for i, (key, label) in enumerate(fields):
+            row = i // 3
+            col = (i % 3) * 2
+            tk.Label(stat_grid, text=f"{label}:", anchor="w", bg=self.colors["bg_main"], fg=self.colors["fg_primary"], font=("Segoe UI", 9, "bold")).grid(row=row, column=col, sticky="w", padx=(0, 4), pady=2)
+            value_lbl = tk.Label(stat_grid, text="-", anchor="w", bg=self.colors["bg_main"], fg=self.colors["fg_muted"], font=("Segoe UI", 9))
+            value_lbl.grid(row=row, column=col+1, sticky="ew", padx=(0, 12), pady=2)
             self.stat_labels[key] = value_lbl
+            stat_grid.grid_columnconfigure(col+1, weight=1)
 
+        # ── DATABASE ──
         db_box = tk.LabelFrame(
-            root_frame, text="Database seperti di Supabase",
-            font=("Arial", 11, "bold"),
-            bg="#ECF0F1", fg="#2C3E50"
+            root_frame, text="Database Supabase (Riwayat Statistik)", font=("Segoe UI", 11, "bold"),
+            bg=self.colors["bg_main"], fg=self.colors["fg_primary"], relief="solid", bd=1
         )
-        db_box.pack(fill="both", expand=True, pady=(4, 8))
+        db_box.grid(row=3, column=0, sticky="nsew", pady=4)
+        
+        db_head = tk.Frame(db_box, bg=self.colors["bg_main"])
+        db_head.pack(fill="x", padx=12, pady=4)
+        tk.Label(db_head, text="Klik baris untuk memilih data", bg=self.colors["bg_main"], fg=self.colors["fg_muted"], font=("Segoe UI", 9, "italic")).pack(side="left")
+        tk.Button(db_head, text="🔄 Refresh Data", command=self.refresh_db_table, bg=self.colors["accent_blue"], fg="white", font=("Segoe UI", 9, "bold"), bd=1, relief="raised", cursor="hand2").pack(side="right")
 
-        db_head = tk.Frame(db_box, bg="#ECF0F1")
-        db_head.pack(fill="x", padx=8, pady=(6, 2))
-        tk.Label(
-            db_head,
-            text="Klik baris untuk memilih data",
-            bg="#ECF0F1", fg="#2C3E50", font=("Arial", 9, "italic")
-        ).pack(side="left")
-        tk.Button(
-            db_head, text="Refresh Data", command=self.refresh_db_table,
-            bg="#3498DB", fg="white", font=("Arial", 9, "bold"), width=12
-        ).pack(side="right")
-
-        table_wrap = tk.Frame(db_box, bg="#ECF0F1")
-        table_wrap.pack(fill="both", expand=True, padx=8, pady=(2, 8))
+        table_wrap = tk.Frame(db_box, bg=self.colors["bg_main"])
+        table_wrap.pack(fill="both", expand=True, padx=8, pady=(0, 6))
 
         columns = ("id", "nama_citra", "average", "std", "skewness", "kurtosis", "created_at")
-        self.db_tree = ttk.Treeview(table_wrap, columns=columns, show="headings", height=8)
-        self.db_tree.heading("id", text="id")
-        self.db_tree.heading("nama_citra", text="nama_citra")
-        self.db_tree.heading("average", text="average")
-        self.db_tree.heading("std", text="std")
-        self.db_tree.heading("skewness", text="skewness")
-        self.db_tree.heading("kurtosis", text="kurtosis")
-        self.db_tree.heading("created_at", text="created_at")
-
-        self.db_tree.column("id", width=50, anchor="center", stretch=False)
-        self.db_tree.column("nama_citra", width=220, anchor="w")
-        self.db_tree.column("average", width=100, anchor="e")
-        self.db_tree.column("std", width=100, anchor="e")
-        self.db_tree.column("skewness", width=110, anchor="e")
-        self.db_tree.column("kurtosis", width=110, anchor="e")
-        self.db_tree.column("created_at", width=190, anchor="w")
+        self.db_tree = ttk.Treeview(table_wrap, columns=columns, show="headings", height=4)
+        for col in columns:
+            self.db_tree.heading(col, text=col)
+        self.db_tree.column("id", width=40, anchor="center", stretch=False)
+        self.db_tree.column("nama_citra", width=180, anchor="w")
+        self.db_tree.column("average", width=90, anchor="e")
+        self.db_tree.column("std", width=90, anchor="e")
+        self.db_tree.column("skewness", width=90, anchor="e")
+        self.db_tree.column("kurtosis", width=90, anchor="e")
+        self.db_tree.column("created_at", width=150, anchor="w")
         self.db_tree.bind("<<TreeviewSelect>>", self.on_db_row_select)
 
         yscroll = ttk.Scrollbar(table_wrap, orient="vertical", command=self.db_tree.yview)
@@ -223,31 +209,33 @@ class ImageAnalysisWindow(tk.Toplevel):
         table_wrap.grid_rowconfigure(0, weight=1)
         table_wrap.grid_columnconfigure(0, weight=1)
 
-        btn_box = tk.Frame(root_frame, bg="#ECF0F1")
-        btn_box.pack(fill="x", pady=(2, 4))
+        # ── BUTTONS ──
+        btn_box = tk.Frame(root_frame, bg=self.colors["bg_root"])
+        btn_box.grid(row=4, column=0, sticky="ew", pady=(4, 0))
 
         buttons = [
-            ("📸 Capture", self.capture_and_analyze, "#3498DB"),
-            ("💾 Simpan", self.save_to_supabase, "#27AE60"),
-            ("📤 Export to Excel", self.export_to_excel, "#8E44AD"),
-            ("🗑️ Hapus", self.delete_data, "#E74C3C"),
-            ("🖨️ Print Histogram", self.print_histogram, "#34495E"),
-            ("❌ Tutup", self.close, "#7F8C8D"),
+            ("📸 Capture", self.capture_and_analyze, "#2980b9", "#2471a3"),
+            ("💾 Simpan", self.save_to_supabase, "#27AE60", "#239B56"),
+            ("📤 Export Excel", self.export_to_excel, "#8E44AD", "#732D91"),
+            ("🗑️ Hapus", self.delete_data, "#E74C3C", "#C0392B"),
+            ("🖨️ Print Hist", self.print_histogram, "#16A085", "#117A65"),
+            ("❌ Tutup", self.close, self.colors["bg_panel"], "#0B1D36"),
         ]
 
-        for i, (txt, cmd, color) in enumerate(buttons):
+        for i, (txt, cmd, color, act_color) in enumerate(buttons):
             tk.Button(
                 btn_box, text=txt, command=cmd,
-                font=("Arial", 10, "bold"),
-                bg=color, fg="white", relief="raised", bd=2
-            ).grid(row=0, column=i, padx=4, pady=4, sticky="ew")
+                font=("Segoe UI", 10, "bold"), cursor="hand2",
+                bg=color, fg="white", activebackground=act_color, activeforeground="white",
+                relief="raised", bd=1
+            ).grid(row=0, column=i, padx=4, pady=2, sticky="ew", ipady=4)
             btn_box.grid_columnconfigure(i, weight=1)
 
         self.status_label = tk.Label(
-            root_frame, text="Status: Menunggu capture...",
-            anchor="w", bg="#ECF0F1", fg="#2C3E50", font=("Arial", 10, "italic")
+            btn_box, text="Status: Menunggu capture...",
+            anchor="w", bg=self.colors["bg_root"], fg=self.colors["accent_green"], font=("Segoe UI", 9, "italic")
         )
-        self.status_label.pack(fill="x", pady=(8, 0))
+        self.status_label.grid(row=1, column=0, columnspan=len(buttons), sticky="w", pady=(2, 0))
 
     def start_camera(self):
         try:
@@ -288,16 +276,40 @@ class ImageAnalysisWindow(tk.Toplevel):
         if bgr_frame is None:
             return
 
-        rgb = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
-        h, w = rgb.shape[:2]
-        ratio = min(620 / w, 420 / h, 1.0)
-        rw, rh = max(1, int(w * ratio)), max(1, int(h * ratio))
-        resized = cv2.resize(rgb, (rw, rh), interpolation=cv2.INTER_AREA)
+        target_w = max(1, self.live_label.winfo_width())
+        target_h = max(1, self.live_label.winfo_height())
+        if target_w < 10 or target_h < 10:
+            return
 
-        pil_img = Image.fromarray(resized)
+        rgb = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2RGB)
+        rendered = self._resize_cover(rgb, target_w, target_h)
+
+        pil_img = Image.fromarray(rendered)
         photo = ImageTk.PhotoImage(pil_img)
         self.live_label.configure(image=photo, text="")
         self.live_label.image = photo
+
+    def _resize_cover(self, rgb_image, target_w, target_h):
+        src_h, src_w = rgb_image.shape[:2]
+        if src_h <= 0 or src_w <= 0:
+            return rgb_image
+
+        ratio = max(target_w / float(src_w), target_h / float(src_h))
+        ratio = max(ratio, 1e-6)
+        new_w = max(1, int(src_w * ratio))
+        new_h = max(1, int(src_h * ratio))
+        interp = cv2.INTER_CUBIC if ratio > 1.0 else cv2.INTER_AREA
+        resized = cv2.resize(rgb_image, (new_w, new_h), interpolation=interp)
+
+        x0 = max(0, (new_w - target_w) // 2)
+        y0 = max(0, (new_h - target_h) // 2)
+        x1 = min(new_w, x0 + target_w)
+        y1 = min(new_h, y0 + target_h)
+
+        cropped = resized[y0:y1, x0:x1]
+        if cropped.shape[1] != target_w or cropped.shape[0] != target_h:
+            cropped = cv2.resize(cropped, (target_w, target_h), interpolation=cv2.INTER_AREA)
+        return cropped
 
     def capture_and_analyze(self):
         if self.last_frame_bgr is None:
