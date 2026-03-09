@@ -1,0 +1,3 @@
+ANON KEY : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2dmF5ZGpuYWR5eXd2ZGJpdWV1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3MDQ0ODIsImV4cCI6MjA4NjI4MDQ4Mn0.PjWS-pF5M0nW5WzcI77Ux26OI-_nVt_mRxkFrtgZc68
+
+https://lvvaydjnadyywvdbiueu.supabase.co
