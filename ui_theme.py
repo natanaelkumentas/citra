@@ -49,7 +49,7 @@ PREVIEW_PROFILES = {
         "result": (620, 349),
         "histogram": (620, 300),
     },
-    "conversi_hull_window": {
+    "analisis_warna": {
         "live": (760, 428),
         "result": (620, 349),
         "histogram": (560, 315),

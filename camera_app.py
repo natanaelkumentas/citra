@@ -9,6 +9,7 @@ from file_window import FileWindow
 from camera_window import CameraWindow
 from camera_color_window import CameraColorWindow
 from conversion_window import ConversionWindow
+from analisis_warna_window import AnalisisWarnaWindow
 
 class CameraApp:
     """Aplikasi Utama: file, kamera, warna, analisis, konversi, analisis filter."""
@@ -33,6 +34,7 @@ class CameraApp:
         self.image_analysis_window = None
         self.analisis_filter_window = None
         self.conversi_hull_window = None
+        self.analisis_warna_window = None
 
         self.setup_main_window()
 
@@ -88,6 +90,10 @@ class CameraApp:
         make_btn("🧭  Conversi hull",
                  self.open_conversi_hull_window,
                  "#1F618D", "#154360").pack(pady=5)
+
+        make_btn("📊  Analisis Warna",
+                 self.open_analisis_warna_window,
+                 "#2980B9", "#1F618D").pack(pady=5)
 
         # ── separator ──
         tk.Frame(main_frame, bg="#ECF0F1", height=2).pack(
@@ -229,6 +235,23 @@ class CameraApp:
             camera_url=url
         )
 
+    def open_analisis_warna_window(self):
+        CameraChoiceDialog(
+            self.root, mode='analysis',
+            callback=lambda use_internal, url: self._launch_analisis_warna(use_internal, url)
+        )
+
+    def _launch_analisis_warna(self, use_internal, url):
+        if self.analisis_warna_window is not None and self.analisis_warna_window.winfo_exists():
+            self.analisis_warna_window.lift()
+            return
+        self.analisis_warna_window = AnalisisWarnaWindow(
+            self.root,
+            self.drive_folder,
+            use_internal=use_internal,
+            camera_url=url
+        )
+
     # ──────────────────────────────────────────
     # Tutup seluruh aplikasi
     # ──────────────────────────────────────────
@@ -236,7 +259,7 @@ class CameraApp:
         for w in (self.file_window, self.camera_window,
                   self.camera_color_window, self.conversion_window,
                   self.image_analysis_window, self.analisis_filter_window,
-                  self.conversi_hull_window):
+                  self.conversi_hull_window, self.analisis_warna_window):
             if w is not None and w.winfo_exists():
                 w.close()
         self.root.quit()
