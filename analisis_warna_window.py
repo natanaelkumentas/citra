@@ -40,6 +40,11 @@ class AnalisisWarnaWindow(tk.Toplevel):
         # ROI Settings
         self.roi_size = tk.IntVar(value=100)
         
+        # Histogram Filters
+        self.show_r = tk.BooleanVar(value=True)
+        self.show_g = tk.BooleanVar(value=True)
+        self.show_b = tk.BooleanVar(value=True)
+        
         # Theme colors (Dark Blue)
         self.colors = {
             "bg_root": "#06162B",
@@ -146,6 +151,23 @@ class AnalisisWarnaWindow(tk.Toplevel):
         
         self.hist_canvas = tk.Canvas(hist_frame, bg="#FFFFFF", highlightthickness=0)
         self.hist_canvas.pack(fill="both", expand=True)
+
+        # Histogram Toggle Buttons
+        toggle_frame = tk.Frame(hist_frame, bg=self.colors["bg_surface"])
+        toggle_frame.pack(fill="x", pady=(5, 0))
+        
+        tk.Checkbutton(toggle_frame, text="Red", variable=self.show_r, 
+                       bg=self.colors["bg_surface"], fg="#E74C3C", selectcolor=self.colors["bg_input"],
+                       activebackground=self.colors["bg_surface"], activeforeground="#E74C3C",
+                       font=("Arial", 9, "bold")).pack(side="left", expand=True)
+        tk.Checkbutton(toggle_frame, text="Green", variable=self.show_g, 
+                       bg=self.colors["bg_surface"], fg="#27AE60", selectcolor=self.colors["bg_input"],
+                       activebackground=self.colors["bg_surface"], activeforeground="#27AE60",
+                       font=("Arial", 9, "bold")).pack(side="left", expand=True)
+        tk.Checkbutton(toggle_frame, text="Blue", variable=self.show_b, 
+                       bg=self.colors["bg_surface"], fg="#4FA3FF", selectcolor=self.colors["bg_input"],
+                       activebackground=self.colors["bg_surface"], activeforeground="#4FA3FF",
+                       font=("Arial", 9, "bold")).pack(side="left", expand=True)
 
         # Action Buttons (Bottom of Right Panel)
         btn_frame = tk.Frame(right_panel, bg=self.colors["bg_surface"])
@@ -398,8 +420,16 @@ class AnalisisWarnaWindow(tk.Toplevel):
         h = self.hist_canvas.winfo_height()
         if w < 10: return
         self.hist_canvas.delete("all")
-        line_colors = ('#4FA3FF', '#27AE60', '#E74C3C')
+        
+        # opencv bgr -> indices are 0:B, 1:G, 2:R
+        # colors for drawing (matching line_colors)
+        line_colors = ['#4FA3FF', '#27AE60', '#E74C3C'] # Blue, Green, Red
+        show_flags = [self.show_b.get(), self.show_g.get(), self.show_r.get()]
+        
         for i in range(3):
+            if not show_flags[i]:
+                continue
+                
             hist = cv2.calcHist([roi], [i], None, [256], [0, 256])
             cv2.normalize(hist, hist, 0, h - 10, cv2.NORM_MINMAX)
             points = []
