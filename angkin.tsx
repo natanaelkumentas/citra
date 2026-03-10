@@ -1,1 +1,0 @@
-angkin punya
