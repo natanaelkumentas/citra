@@ -85,10 +85,11 @@ class CameraWindow(tk.Toplevel):
         main.grid_rowconfigure(1, weight=0)
         main.grid_columnconfigure(0, weight=1)
 
-        # ── Container Kamera Kaku (Fixed Height 500) ──
-        preview_wrap = tk.Frame(main, bg=self.colors["bg_main"], height=520)
+        # ── Container Kamera (Dynamic Height for Better Fit) ──
+        preview_wrap = tk.Frame(main, bg=self.colors["bg_main"])
         preview_wrap.grid(row=0, column=0, sticky="ew", pady=(12, 12))
-        preview_wrap.grid_propagate(False)
+        # Remove grid_propagate(False) to eliminate black bars
+        # preview_wrap.grid_propagate(False)
         preview_wrap.grid_rowconfigure(0, weight=1)
         preview_wrap.grid_columnconfigure(0, weight=1, uniform="panel")
         preview_wrap.grid_columnconfigure(1, weight=1, uniform="panel")
@@ -128,8 +129,8 @@ class CameraWindow(tk.Toplevel):
     def _make_panel(self, parent, col, title, empty_text):
         panel = tk.LabelFrame(parent, text=title, bg=self.colors["bg_panel"], fg=self.colors["fg_primary"], font=("Segoe UI", 11, "bold"), bd=1, relief="solid")
         panel.grid(row=0, column=col, sticky="nsew", padx=(0 if col == 0 else 8, 0))
-        panel.grid_propagate(False)
-        label = tk.Label(panel, text=empty_text, bg=self.colors["bg_panel_inner"], fg=self.colors["fg_primary"], font=("Segoe UI", 10))
+        # panel.grid_propagate(False) # Allow to follow content
+        label = tk.Label(panel, text=empty_text, bg=self.colors["bg_panel"], fg=self.colors["fg_primary"], font=("Segoe UI", 10))
         label.pack(fill="both", expand=True)
         return label
 
@@ -141,11 +142,17 @@ class CameraWindow(tk.Toplevel):
         try:
             self.show_log("🔄 Menghubungkan ke Kamera...", "#3498DB")
             self.camera = cv2.VideoCapture(0 if self.use_internal else self.camera_url)
+            if self.use_internal and not self.camera.isOpened():
+                # Fallback to DSHOW on Windows for internal camera
+                self.camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            
             if not self.use_internal:
                 try:
-                    if self.camera_url.isdigit():
+                    target = self.camera_url
+                    if hasattr(target, 'isdigit') and target.isdigit():
+                        target = int(target)
                         self.camera.release()
-                        self.camera = cv2.VideoCapture(int(self.camera_url))
+                        self.camera = cv2.VideoCapture(target)
                 except Exception:
                     pass
             try:
@@ -158,6 +165,7 @@ class CameraWindow(tk.Toplevel):
 
             self.is_running = True
             self.show_log("✅ Terhubung ke Kamera!", "#2ECC71")
+            self.update_idletasks() # Ensure window is ready
             self.update_camera()
         except Exception as e:
             self.live_label.configure(
@@ -290,24 +298,44 @@ class CameraWindow(tk.Toplevel):
         self.capture_label.configure(image=photo, text="")
         self.capture_label.image = photo
 
+    def _resize_contain(self, rgb_image, target_w, target_h):
+        src_h, src_w = rgb_image.shape[:2]
+        if src_h <= 0 or src_w <= 0:
+            return rgb_image
+
+        ratio = min(target_w / float(src_w), target_h / float(src_h))
+        new_w = max(1, int(src_w * ratio))
+        new_h = max(1, int(src_h * ratio))
+        
+        resized = cv2.resize(rgb_image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        
+        # Create theme-colored canvas instead of black
+        # hex #143457 -> BGR (87, 52, 20)
+        canvas = np.full((target_h, target_w, 3), (87, 52, 20), dtype=np.uint8)
+        
+        # Center the resized image
+        y_off = (target_h - new_h) // 2
+        x_off = (target_w - new_w) // 2
+        
+        canvas[y_off:y_off+new_h, x_off:x_off+new_w] = resized
+        return canvas
+
     def _resize_cover(self, rgb_image, target_w, target_h):
         src_h, src_w = rgb_image.shape[:2]
         if src_h <= 0 or src_w <= 0:
             return rgb_image
 
         ratio = max(target_w / float(src_w), target_h / float(src_h))
-        ratio = max(ratio, 1e-6)
         new_w = max(1, int(src_w * ratio))
         new_h = max(1, int(src_h * ratio))
+        
         interp = cv2.INTER_CUBIC if ratio > 1.0 else cv2.INTER_AREA
         resized = cv2.resize(rgb_image, (new_w, new_h), interpolation=interp)
-
-        x0 = max(0, (new_w - target_w) // 2)
-        y0 = max(0, (new_h - target_h) // 2)
-        x1 = min(new_w, x0 + target_w)
-        y1 = min(new_h, y0 + target_h)
-
-        cropped = resized[y0:y1, x0:x1]
+        
+        x0 = (new_w - target_w) // 2
+        y0 = (new_h - target_h) // 2
+        
+        cropped = resized[y0:y0+target_h, x0:x0+target_w]
         if cropped.shape[1] != target_w or cropped.shape[0] != target_h:
             cropped = cv2.resize(cropped, (target_w, target_h), interpolation=cv2.INTER_AREA)
         return cropped

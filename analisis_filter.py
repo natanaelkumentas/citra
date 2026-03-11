@@ -41,7 +41,7 @@ class AnalisisFilterWindow(tk.Toplevel):
             "accent_orange": "#F2994A",
             "btn_active": "#26517F",
         }
-        self.padding = {"outer": 12, "gap": 8, "row": 6}
+        self.padding = {"outer": 10, "gap": 6, "row": 4}
 
         self.title("Analisis Filter")
         self.geometry("1480x820")
@@ -54,7 +54,7 @@ class AnalisisFilterWindow(tk.Toplevel):
 
         self.threshold_var = tk.IntVar(value=127)
         self.status_var = tk.StringVar(value="Status: Siap. Buka gambar atau aktifkan kamera.")
-        self.threshold_enabled_filters = {"Canny", "Segmentasi Warna"}
+        self.threshold_enabled_filters = {"Canny"}
 
         self._build_ui()
         self._update_threshold_label()
@@ -75,7 +75,7 @@ class AnalisisFilterWindow(tk.Toplevel):
         self._build_main_area(root)
 
     def _build_left_menu(self, parent):
-        left_menu = tk.Frame(parent, bg=self.colors["bg_sidebar"], width=190, relief="solid", bd=1)
+        left_menu = tk.Frame(parent, bg=self.colors["bg_sidebar"], width=160, relief="solid", bd=1)
         left_menu.grid(row=0, column=0, sticky="nsw", padx=(0, self.padding["gap"]))
         left_menu.grid_propagate(False)
 
@@ -84,8 +84,8 @@ class AnalisisFilterWindow(tk.Toplevel):
             text="ANALISIS FILTER",
             bg=self.colors["bg_sidebar"],
             fg=self.colors["fg_primary"],
-            font=("Segoe UI", 12, "bold"),
-        ).pack(fill="x", padx=12, pady=(14, 10))
+            font=("Segoe UI", 11, "bold"),
+        ).pack(fill="x", padx=8, pady=(10, 8))
 
         buttons = [
             ("Open", self.open_image),
@@ -109,44 +109,53 @@ class AnalisisFilterWindow(tk.Toplevel):
                 left_menu,
                 text=text,
                 command=cmd,
-                font=("Segoe UI", 10, "bold"),
+                font=("Segoe UI", 9, "bold"),
                 bg=self.colors["bg_sidebar_btn"],
                 fg=self.colors["fg_primary"],
                 activebackground=self.colors["btn_active"],
                 activeforeground=self.colors["fg_primary"],
-                width=18,
+                width=16,
                 relief="raised",
                 bd=1,
                 cursor="hand2",
-            ).pack(fill="x", padx=12, pady=3, ipady=1)
+            ).pack(fill="x", padx=8, pady=2, ipady=1)
 
     def _build_main_area(self, parent):
         main = tk.Frame(parent, bg=self.colors["bg_main"])
         main.grid(row=0, column=1, sticky="nsew")
-        main.grid_rowconfigure(0, weight=1)
-        main.grid_rowconfigure(1, weight=0)
-        main.grid_rowconfigure(2, weight=0)
-        main.grid_rowconfigure(3, weight=0)
+        main.grid_rowconfigure(0, weight=0)  # image panels — fixed height
+        main.grid_rowconfigure(1, weight=1)  # histogram — expands
+        main.grid_rowconfigure(2, weight=0)  # camera controls
+        main.grid_rowconfigure(3, weight=0)  # threshold
+        main.grid_rowconfigure(4, weight=0)  # status
         main.grid_columnconfigure(0, weight=1)
 
-        # Mengubah struktur grid image_wrap menjadi 2x2. Baris atas untuk image, baris bawah untuk Histogram.
-        image_wrap = tk.Frame(main, bg=self.colors["bg_main"])
-        image_wrap.grid(row=0, column=0, sticky="nsew", pady=(self.padding["gap"], self.padding["gap"]))
+        # ── Image panels (2 columns, standard fixed height) ──
+        image_wrap = tk.Frame(main, bg=self.colors["bg_main"], height=480)
+        image_wrap.grid(row=0, column=0, sticky="ew", pady=(self.padding["gap"], 4))
+        image_wrap.grid_propagate(False)
         image_wrap.grid_rowconfigure(0, weight=1)
-        image_wrap.grid_rowconfigure(1, weight=1)
         image_wrap.grid_columnconfigure(0, weight=1, uniform="panel")
         image_wrap.grid_columnconfigure(1, weight=1, uniform="panel")
 
         self.original_label = self._make_panel(image_wrap, 0, 0, 1, "Original", "Belum ada gambar")
         self.result_label = self._make_panel(image_wrap, 0, 1, 1, "Hasil Filter", "Belum ada hasil")
-        self.hist_label = self._make_panel(image_wrap, 1, 0, 2, "Histogram", "Histogram belum tersedia")
-        
+
+        # ── Histogram (full width, larger) ──
+        hist_wrap = tk.Frame(main, bg=self.colors["bg_main"])
+        hist_wrap.grid(row=1, column=0, sticky="nsew", pady=(2, 2))
+        hist_wrap.grid_rowconfigure(0, weight=1)
+        hist_wrap.grid_columnconfigure(0, weight=1)
+
+        self.hist_label = self._make_panel(hist_wrap, 0, 0, 1, "Histogram", "Histogram belum tersedia")
+
         self.original_label.bind("<Configure>", self._on_original_resize)
         self.result_label.bind("<Configure>", self._on_result_resize)
         self.hist_label.bind("<Configure>", self._on_hist_resize)
 
+        # ── Camera controls ──
         camera_controls = tk.Frame(main, bg=self.colors["bg_main"])
-        camera_controls.grid(row=1, column=0, sticky="ew", pady=(self.padding["row"], self.padding["row"]))
+        camera_controls.grid(row=2, column=0, sticky="ew", pady=(self.padding["row"], self.padding["row"]))
         for i in range(4):
             camera_controls.grid_columnconfigure(i, weight=1)
 
@@ -156,7 +165,7 @@ class AnalisisFilterWindow(tk.Toplevel):
             bg="#2980b9", fg="white", font=("Segoe UI", 10, "bold"), relief="raised", bd=1,
             activebackground="#2471a3", activeforeground="white"
         )
-        self.capture_btn.grid(row=0, column=0, padx=5, sticky="ew", ipady=4)
+        self.capture_btn.grid(row=0, column=0, padx=4, sticky="ew", ipady=3)
 
         self.save_capture_btn = tk.Button(
             camera_controls, text="Simpan Capture", 
@@ -164,7 +173,7 @@ class AnalisisFilterWindow(tk.Toplevel):
             bg="#27AE60", fg="white", font=("Segoe UI", 10, "bold"), relief="raised", bd=1,
             activebackground="#239B56", activeforeground="white"
         )
-        self.save_capture_btn.grid(row=0, column=1, padx=5, sticky="ew", ipady=4)
+        self.save_capture_btn.grid(row=0, column=1, padx=4, sticky="ew", ipady=3)
 
         self.delete_capture_btn = tk.Button(
             camera_controls, text="Hapus Data", 
@@ -172,7 +181,7 @@ class AnalisisFilterWindow(tk.Toplevel):
             bg="#E67E22", fg="white", font=("Segoe UI", 10, "bold"), relief="raised", bd=1,
             activebackground="#D35400", activeforeground="white"
         )
-        self.delete_capture_btn.grid(row=0, column=2, padx=5, sticky="ew", ipady=4)
+        self.delete_capture_btn.grid(row=0, column=2, padx=4, sticky="ew", ipady=3)
 
         self.close_camera_btn = tk.Button(
             camera_controls, text="Tutup Kamera", 
@@ -180,24 +189,25 @@ class AnalisisFilterWindow(tk.Toplevel):
             bg="#E74C3C", fg="white", font=("Segoe UI", 10, "bold"), relief="raised", bd=1,
             activebackground="#C0392B", activeforeground="white"
         )
-        self.close_camera_btn.grid(row=0, column=3, padx=5, sticky="ew", ipady=4)
+        self.close_camera_btn.grid(row=0, column=3, padx=4, sticky="ew", ipady=3)
 
+        # ── Threshold ──
         threshold_box = tk.LabelFrame(
             main,
             text="Threshold",
-            font=("Segoe UI", 11, "bold"),
+            font=("Segoe UI", 10, "bold"),
             bg=self.colors["bg_panel"],
             fg=self.colors["fg_primary"],
             bd=1,
             relief="solid",
         )
-        threshold_box.grid(row=2, column=0, sticky="ew", pady=(5, 5))
+        threshold_box.grid(row=3, column=0, sticky="ew", pady=(2, 2))
 
         self.threshold_value_label = tk.Label(
             threshold_box, text="127", bg=self.colors["bg_panel"], fg=self.colors["fg_primary"], 
             width=5, anchor="w", font=("Segoe UI", 10, "bold")
         )
-        self.threshold_value_label.pack(side="left", padx=10, pady=5)
+        self.threshold_value_label.pack(side="left", padx=8, pady=4)
 
         self.threshold_scale = tk.Scale(
             threshold_box,
@@ -212,18 +222,19 @@ class AnalisisFilterWindow(tk.Toplevel):
             troughcolor=self.colors["bg_panel_inner"],
             highlightthickness=0,
             state="disabled",
-            showvalue=0, # hide default scale text value since we have custom label
+            showvalue=0,
         )
-        self.threshold_scale.pack(side="left", fill="x", expand=True, padx=10, pady=5)
+        self.threshold_scale.pack(side="left", fill="x", expand=True, padx=8, pady=4)
 
+        # ── Status ──
         tk.Label(
             main,
             textvariable=self.status_var,
             anchor="w",
             bg=self.colors["bg_main"],
             fg=self.colors["fg_muted"],
-            font=("Segoe UI", 10, "italic"),
-        ).grid(row=3, column=0, sticky="ew", pady=(5, 0))
+            font=("Segoe UI", 9, "italic"),
+        ).grid(row=4, column=0, sticky="ew", pady=(2, 0))
 
     def _make_panel(self, parent, row, col, colspan, title, empty_text):
         panel = tk.LabelFrame(
@@ -231,7 +242,7 @@ class AnalisisFilterWindow(tk.Toplevel):
             text=title,
             bg=self.colors["bg_panel"],
             fg=self.colors["fg_primary"],
-            font=("Segoe UI", 11, "bold"),
+            font=("Segoe UI", 10, "bold"),
             bd=1,
             relief="solid",
         )
@@ -243,12 +254,13 @@ class AnalisisFilterWindow(tk.Toplevel):
             padx=(0 if col == 0 else self.padding["gap"]/2, 0 if col == 1 or colspan == 2 else self.padding["gap"]/2),
             pady=(0 if row == 0 else self.padding["gap"], 0),
         )
+        # Re-enable propagation lock for "standart" fixed container size
         panel.grid_propagate(False)
 
         label = tk.Label(
             panel,
             text=empty_text,
-            bg=self.colors["bg_panel_inner"],
+            bg=self.colors["bg_panel"], # Use theme blue instead of darker inner blue
             fg=self.colors["fg_primary"],
             anchor="center",
             font=("Segoe UI", 10),
@@ -415,11 +427,13 @@ class AnalisisFilterWindow(tk.Toplevel):
 
     def on_threshold_change(self, _value):
         self._update_threshold_label()
-        if hasattr(self, '_filter_job') and self._filter_job is not None:
+        # Fast debounce (30ms) to prevent RecursionError on rapid slider movement
+        if self._filter_job is not None:
             self.after_cancel(self._filter_job)
-        self._filter_job = self.after(200, self._apply_current_filter_delayed)
+        self._filter_job = self.after(30, self._apply_filter_direct)
 
-    def _apply_current_filter_delayed(self):
+    def _apply_filter_direct(self):
+        self._filter_job = None
         if self.source_image is not None and self.current_filter is not None:
             self.apply_filter(self.current_filter)
 
@@ -536,7 +550,7 @@ class AnalisisFilterWindow(tk.Toplevel):
             self.threshold_scale.configure(state="disabled")
 
     def _get_label_size(self, label_widget, fallback_w, fallback_h):
-        label_widget.update_idletasks()
+        # Removed update_idletasks() to prevent RecursionError in nested event loops
         width = max(1, int(label_widget.winfo_width()))
         height = max(1, int(label_widget.winfo_height()))
         if width <= 1 or height <= 1:
@@ -554,7 +568,7 @@ class AnalisisFilterWindow(tk.Toplevel):
         else:
             rgb = cv2.cvtColor(image_data, cv2.COLOR_BGR2RGB)
 
-        target_w, target_h = self._get_label_size(label_widget, 390, 370)
+        target_w, target_h = self._get_label_size(label_widget, 390, 300)
         rendered = self._resize_cover(rgb, target_w, target_h)
         photo = ImageTk.PhotoImage(Image.fromarray(rendered))
         label_widget.configure(image=photo, text="")
@@ -566,57 +580,183 @@ class AnalisisFilterWindow(tk.Toplevel):
             self.hist_label.image = None
             return
 
-        target_w, target_h = self._get_label_size(self.hist_label, 420, 320)
+        target_w, target_h = self._get_label_size(self.hist_label, 600, 350)
         hist_img = self._create_histogram_image(image_data, target_w, target_h)
         photo = ImageTk.PhotoImage(Image.fromarray(hist_img))
         self.hist_label.configure(image=photo, text="")
         self.hist_label.image = photo
 
     def _create_histogram_image(self, image_data, width, height):
-        width = max(220, int(width))
-        height = max(180, int(height))
-        canvas = np.full((height, width, 3), 255, dtype=np.uint8)
-        left = max(18, int(width * 0.04))
-        top = max(10, int(height * 0.03))
-        right = width - max(10, int(width * 0.03))
-        bottom = height - max(22, int(height * 0.06))
-        cv2.rectangle(canvas, (left, top), (right, bottom), (225, 225, 225), 1)
+        """Create detailed histogram with axis labels, gridlines, peak values"""
+        width = max(400, int(width))
+        height = max(250, int(height))
 
+        # Dark themed background
+        bg_color = (15, 42, 72)  # #0F2A48
+        canvas = np.full((height, width, 3), bg_color[0], dtype=np.uint8)
+        canvas[:, :, 0] = bg_color[0]
+        canvas[:, :, 1] = bg_color[1]
+        canvas[:, :, 2] = bg_color[2]
+
+        # Margins for axis labels
+        left_margin = max(60, int(width * 0.07))
+        right_margin = max(20, int(width * 0.02))
+        top_margin = max(30, int(height * 0.10))
+        bottom_margin = max(50, int(height * 0.16))
+
+        plot_left = left_margin
+        plot_top = top_margin
+        plot_right = width - right_margin
+        plot_bottom = height - bottom_margin
+        plot_w = plot_right - plot_left
+        plot_h = plot_bottom - plot_top
+
+        if plot_w < 50 or plot_h < 50:
+            return cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
+
+        # Draw plot area background
+        cv2.rectangle(canvas, (plot_left, plot_top), (plot_right, plot_bottom), (20, 50, 82), -1)
+        cv2.rectangle(canvas, (plot_left, plot_top), (plot_right, plot_bottom), (60, 90, 130), 1)
+
+        # Calculate histograms
         if image_data.ndim == 2:
-            channels = [(image_data, (80, 80, 80))]
+            channels = [(image_data, (200, 200, 200), "Gray")]
         else:
             bgr = image_data if image_data.shape[2] == 3 else image_data[:, :, :3]
             channels = [
-                (bgr[:, :, 2], (60, 60, 220)),   # R
-                (bgr[:, :, 1], (60, 170, 60)),   # G
-                (bgr[:, :, 0], (220, 110, 60)),  # B
+                (bgr[:, :, 2], (80, 80, 230), "Red"),
+                (bgr[:, :, 1], (80, 200, 80), "Green"),
+                (bgr[:, :, 0], (230, 150, 80), "Blue"),
             ]
 
         histograms = []
-        for channel_data, color in channels:
+        for channel_data, color, name in channels:
             hist = cv2.calcHist([channel_data], [0], None, [256], [0, 256]).flatten()
-            histograms.append((hist, color))
+            peak_idx = int(np.argmax(hist))
+            peak_val = int(hist[peak_idx])
+            histograms.append((hist, color, name, peak_idx, peak_val))
 
-        max_val = max(float(np.max(h)) for h, _ in histograms)
+        max_val = max(float(np.max(h)) for h, _, _, _, _ in histograms)
         if max_val <= 0:
             max_val = 1.0
 
-        plot_w, plot_h = right - left, bottom - top
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = max(0.35, min(0.55, width / 1100))
+        label_color = (180, 200, 220)
+        grid_color = (40, 65, 100)
 
-        for hist, color in histograms:
+        # ── Y-axis labels & horizontal gridlines ──
+        y_ticks = 5
+        for i in range(y_ticks + 1):
+            frac = i / y_ticks
+            y = plot_bottom - int(frac * plot_h)
+            val = int(frac * max_val)
+
+            # Dashed gridline
+            if 0 < i < y_ticks:
+                for x in range(plot_left, plot_right, 5):
+                    cv2.line(canvas, (x, y), (min(x + 2, plot_right), y), grid_color, 1)
+
+            # Tick mark
+            cv2.line(canvas, (plot_left - 4, y), (plot_left, y), label_color, 1)
+
+            # Label
+            if val >= 10000:
+                label_text = f"{val / 1000:.0f}k"
+            elif val >= 1000:
+                label_text = f"{val / 1000:.1f}k"
+            else:
+                label_text = str(val)
+            text_size = cv2.getTextSize(label_text, font, font_scale, 1)[0]
+            cv2.putText(canvas, label_text, (plot_left - text_size[0] - 8, y + 4),
+                        font, font_scale, label_color, 1, cv2.LINE_AA)
+
+        # ── X-axis labels & vertical gridlines ──
+        x_ticks = [0, 32, 64, 96, 128, 160, 192, 224, 255]
+        for val in x_ticks:
+            x = plot_left + int(val * plot_w / 255)
+
+            # Dashed gridline
+            if 0 < val < 255:
+                for y in range(plot_top, plot_bottom, 5):
+                    cv2.line(canvas, (x, y), (x, min(y + 2, plot_bottom)), grid_color, 1)
+
+            # Tick mark
+            cv2.line(canvas, (x, plot_bottom), (x, plot_bottom + 4), label_color, 1)
+
+            # Label
+            text = str(val)
+            text_size = cv2.getTextSize(text, font, font_scale, 1)[0]
+            cv2.putText(canvas, text, (x - text_size[0] // 2, plot_bottom + 18),
+                        font, font_scale, label_color, 1, cv2.LINE_AA)
+
+        # ── Draw histogram lines with peak dot+label ON the line ──
+        for hist, color, name, peak_idx, peak_val in histograms:
             points = []
             for i in range(256):
-                x = left + int(i * (plot_w / 255))
-                y = bottom - int((hist[i] / max_val) * plot_h)
+                x = plot_left + int(i * plot_w / 255)
+                y = plot_bottom - int((hist[i] / max_val) * plot_h)
+                y = max(plot_top, min(plot_bottom, y))
                 points.append((x, y))
             for i in range(1, len(points)):
-                cv2.line(canvas, points[i - 1], points[i], color, 1)
+                cv2.line(canvas, points[i - 1], points[i], color, 2, cv2.LINE_AA)
 
-        font_scale = max(0.35, min(0.65, width / 900))
-        axis_y = min(height - 6, bottom + 18)
-        cv2.putText(canvas, "0", (left - 4, axis_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (80, 80, 80), 1)
-        cv2.putText(canvas, "255", (right - 24, axis_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (80, 80, 80), 1)
+            # Peak marker: circle dot at the peak point on the line
+            peak_x = plot_left + int(peak_idx * plot_w / 255)
+            peak_y = plot_bottom - int((hist[peak_idx] / max_val) * plot_h)
+            peak_y = max(plot_top, min(plot_bottom, peak_y))
+            cv2.circle(canvas, (peak_x, peak_y), 5, color, -1, cv2.LINE_AA)
+            cv2.circle(canvas, (peak_x, peak_y), 6, (255, 255, 255), 1, cv2.LINE_AA)
+
+            # Peak label next to the dot
+            peak_text = f"{name[0]}:{peak_idx}"
+            label_x = peak_x + 8
+            label_y = peak_y - 6
+            
+            # Offset labels per channel to help prevent overlap
+            if name == "Red": label_y -= 12
+            if name == "Blue": label_y += 12
+                
+            # Ensure label stays within plot bounds
+            if label_x + 40 > plot_right:
+                label_x = peak_x - 45
+            if label_y < plot_top + 10:
+                label_y = peak_y + 16
+            if label_y > height - bottom_margin - 5:
+                label_y = peak_y - 12
+                
+            cv2.putText(canvas, peak_text, (label_x, label_y),
+                        font, font_scale, color, 1, cv2.LINE_AA)
+
+        # ── Axis titles ──
+        x_title = "Pixel Intensity (0 - 255)"
+        text_size = cv2.getTextSize(x_title, font, font_scale, 1)[0]
+        cv2.putText(canvas, x_title, (plot_left + plot_w // 2 - text_size[0] // 2, height - 8),
+                    font, font_scale, label_color, 1, cv2.LINE_AA)
+
         return cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
+
+    def _resize_contain(self, rgb_image, target_w, target_h):
+        src_h, src_w = rgb_image.shape[:2]
+        if src_h <= 0 or src_w <= 0:
+            return rgb_image
+
+        ratio = min(target_w / float(src_w), target_h / float(src_h))
+        new_w = max(1, int(src_w * ratio))
+        new_h = max(1, int(src_h * ratio))
+
+        resized = cv2.resize(rgb_image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        
+        # Create theme-colored canvas instead of black
+        # hex #143457 -> BGR (87, 52, 20)
+        canvas = np.full((target_h, target_w, 3), (87, 52, 20), dtype=np.uint8)
+        
+        # Center the resized image
+        y_off = (target_h - new_h) // 2
+        x_off = (target_w - new_w) // 2
+        
+        canvas[y_off:y_off+new_h, x_off:x_off+new_w] = resized
+        return canvas
 
     def _resize_cover(self, rgb_image, target_w, target_h):
         src_h, src_w = rgb_image.shape[:2]
@@ -624,18 +764,16 @@ class AnalisisFilterWindow(tk.Toplevel):
             return rgb_image
 
         ratio = max(target_w / float(src_w), target_h / float(src_h))
-        ratio = max(ratio, 1e-6)
         new_w = max(1, int(src_w * ratio))
         new_h = max(1, int(src_h * ratio))
+        
         interp = cv2.INTER_CUBIC if ratio > 1.0 else cv2.INTER_AREA
         resized = cv2.resize(rgb_image, (new_w, new_h), interpolation=interp)
-
-        x0 = max(0, (new_w - target_w) // 2)
-        y0 = max(0, (new_h - target_h) // 2)
-        x1 = min(new_w, x0 + target_w)
-        y1 = min(new_h, y0 + target_h)
-
-        cropped = resized[y0:y1, x0:x1]
+        
+        x0 = (new_w - target_w) // 2
+        y0 = (new_h - target_h) // 2
+        
+        cropped = resized[y0:y0+target_h, x0:x0+target_w]
         if cropped.shape[1] != target_w or cropped.shape[0] != target_h:
             cropped = cv2.resize(cropped, (target_w, target_h), interpolation=cv2.INTER_AREA)
         return cropped

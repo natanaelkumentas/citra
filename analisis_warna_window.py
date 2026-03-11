@@ -80,30 +80,33 @@ class AnalisisWarnaWindow(tk.Toplevel):
         main_vbox = tk.Frame(self, bg=self.colors["bg_root"])
         main_vbox.pack(fill="both", expand=True, padx=20, pady=10)
         
-        # Upper Area: Left (Camera) and Right (Stats/Hist)
+        # Upper Area: Horizontal Split
         upper_area = tk.Frame(main_vbox, bg=self.colors["bg_root"])
         upper_area.pack(fill="both", expand=True)
-        
-        # Left Panel: Live View
+        upper_area.grid_columnconfigure(0, weight=3) # Camera large
+        upper_area.grid_columnconfigure(1, weight=2) # Stats & Hist
+        upper_area.grid_rowconfigure(0, weight=1)
+
+        # Left Panel: Camera view
         left_panel = tk.Frame(upper_area, bg=self.colors["bg_surface"], bd=1, relief="solid")
-        left_panel.pack(side="left", fill="both", expand=True, padx=(0, 10))
-        
+        left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+
         header_l = tk.Frame(left_panel, bg=self.colors["bg_surface"])
         header_l.pack(fill="x", pady=10)
         tk.Label(header_l, text="LIVE CAMERA CAPTURE", font=("Arial", 14, "bold"),
                  bg=self.colors["bg_surface"], fg=self.colors["accent"]).pack()
-        
-        # Video Wrapper (Fixed size to prevent growing madness)
+
+        # Video Wrapper
         self.video_wrap = tk.Frame(left_panel, bg="#000000")
         self.video_wrap.pack(fill="both", expand=True, padx=10, pady=5)
         self.video_wrap.pack_propagate(False)
-        
+
         self.video_label = tk.Label(self.video_wrap, bg="#000000")
         self.video_label.pack(fill="both", expand=True)
-        
-        # ROI Size Control
+
+        # ROI Slider at bottom of camera panel
         ctrl_frame = tk.Frame(left_panel, bg=self.colors["bg_surface"])
-        ctrl_frame.pack(fill="x", padx=10, pady=10)
+        ctrl_frame.pack(fill="x", padx=10, pady=5)
         tk.Label(ctrl_frame, text="Ukuran ROI:", bg=self.colors["bg_surface"], fg=self.colors["fg_primary"]).pack(side="left", padx=5)
         self.roi_slider = tk.Scale(ctrl_frame, from_=50, to=400, orient="horizontal", 
                                    variable=self.roi_size, bg=self.colors["bg_surface"], 
@@ -111,87 +114,78 @@ class AnalisisWarnaWindow(tk.Toplevel):
                                    troughcolor=self.colors["bg_input"], activebackground=self.colors["accent"])
         self.roi_slider.pack(side="left", fill="x", expand=True, padx=5)
 
-        # Right Panel: Analysis & Stats
-        right_panel = tk.Frame(upper_area, bg=self.colors["bg_surface"], width=480, bd=1, relief="solid")
-        right_panel.pack(side="right", fill="both", padx=(10, 0))
-        right_panel.pack_propagate(False)
+        # Right Panel: Stats & Histogram
+        right_panel = tk.Frame(upper_area, bg=self.colors["bg_surface"], bd=1, relief="solid")
+        right_panel.grid(row=0, column=1, sticky="nsew")
+        right_panel.grid_rowconfigure(1, weight=1) # Histogram expands
+        right_panel.grid_columnconfigure(0, weight=1)
 
         # Stats Area (Top of Right Panel)
         stats_frame = tk.Frame(right_panel, bg=self.colors["bg_surface"], padx=15, pady=10)
-        stats_frame.pack(fill="x")
+        stats_frame.grid(row=0, column=0, sticky="ew")
         
-        self.lbl_mean = tk.Label(stats_frame, text="Mean RGB: ( -, -, - )", font=("Consolas", 11, "bold"), 
+        self.lbl_mean = tk.Label(stats_frame, text="Mean RGB: ( -, -, - )", font=("Consolas", 10, "bold"), 
                                  bg=self.colors["bg_surface"], fg=self.colors["fg_primary"], anchor="w")
-        self.lbl_mean.pack(fill="x", pady=2)
+        self.lbl_mean.pack(fill="x", pady=1)
         
-        self.lbl_unique = tk.Label(stats_frame, text="Jumlah Warna Unik: -", font=("Consolas", 11), 
+        self.lbl_unique = tk.Label(stats_frame, text="Jumlah Warna Unik: -", font=("Consolas", 10), 
                                    bg=self.colors["bg_surface"], fg=self.colors["fg_primary"], anchor="w")
-        self.lbl_unique.pack(fill="x", pady=2)
+        self.lbl_unique.pack(fill="x", pady=1)
         
-        self.lbl_dominant = tk.Label(stats_frame, text="Warna Dominan: ( -, -, - )", font=("Consolas", 11), 
+        self.lbl_dominant = tk.Label(stats_frame, text="Warna Dominan: ( -, -, - )", font=("Consolas", 10), 
                                      bg=self.colors["bg_surface"], fg=self.colors["fg_primary"], anchor="w")
-        self.lbl_dominant.pack(fill="x", pady=2)
+        self.lbl_dominant.pack(fill="x", pady=1)
         
         # Description/Log View
-        self.txt_desc = tk.Text(stats_frame, height=4, font=("Consolas", 9), bg=self.colors["bg_input"], 
-                                fg=self.colors["fg_muted"], bd=0, padx=5, pady=5)
+        self.txt_desc = tk.Text(stats_frame, height=3, font=("Consolas", 8), bg=self.colors["bg_input"], 
+                                fg=self.colors["fg_muted"], bd=0, padx=5, pady=4)
         self.txt_desc.pack(fill="x", pady=5)
         self.txt_desc.insert("1.0", "Detail analisis akan muncul di sini...")
         self.txt_desc.configure(state="disabled")
 
         # Dominant Color Preview Box
-        self.dom_color_box = tk.Canvas(stats_frame, width=60, height=60, bg=self.colors["bg_input"], 
+        self.dom_color_box = tk.Canvas(stats_frame, width=30, height=30, bg=self.colors["bg_input"], 
                                        highlightthickness=1, highlightbackground=self.colors["fg_muted"])
-        self.dom_color_box.pack(pady=5)
+        self.dom_color_box.pack(pady=3)
 
         # Histogram Area (Middle of Right Panel)
         hist_frame = tk.LabelFrame(right_panel, text=" Histogram RGB (ROI) ", font=("Arial", 11, "bold"),
                                    bg=self.colors["bg_surface"], fg=self.colors["fg_primary"], padx=10, pady=5)
-        hist_frame.pack(fill="both", expand=True, padx=15, pady=5)
+        hist_frame.grid(row=1, column=0, sticky="nsew", padx=15, pady=5)
         
         self.hist_canvas = tk.Canvas(hist_frame, bg="#FFFFFF", highlightthickness=0)
         self.hist_canvas.pack(fill="both", expand=True)
 
-        # Histogram Toggle Buttons
+        # Toggle frame inside hist frame
         toggle_frame = tk.Frame(hist_frame, bg=self.colors["bg_surface"])
         toggle_frame.pack(fill="x", pady=(5, 0))
         
-        tk.Checkbutton(toggle_frame, text="Red", variable=self.show_r, 
-                       bg=self.colors["bg_surface"], fg="#E74C3C", selectcolor=self.colors["bg_input"],
-                       activebackground=self.colors["bg_surface"], activeforeground="#E74C3C",
-                       font=("Arial", 9, "bold")).pack(side="left", expand=True)
-        tk.Checkbutton(toggle_frame, text="Green", variable=self.show_g, 
-                       bg=self.colors["bg_surface"], fg="#27AE60", selectcolor=self.colors["bg_input"],
-                       activebackground=self.colors["bg_surface"], activeforeground="#27AE60",
-                       font=("Arial", 9, "bold")).pack(side="left", expand=True)
-        tk.Checkbutton(toggle_frame, text="Blue", variable=self.show_b, 
-                       bg=self.colors["bg_surface"], fg="#4FA3FF", selectcolor=self.colors["bg_input"],
-                       activebackground=self.colors["bg_surface"], activeforeground="#4FA3FF",
-                       font=("Arial", 9, "bold")).pack(side="left", expand=True)
+        for c_text, c_var, c_color in [("Red", self.show_r, "#E74C3C"), ("Green", self.show_g, "#27AE60"), ("Blue", self.show_b, "#4FA3FF")]:
+            tk.Checkbutton(toggle_frame, text=c_text, variable=c_var, 
+                           bg=self.colors["bg_surface"], fg=c_color, selectcolor=self.colors["bg_input"],
+                           activebackground=self.colors["bg_surface"], activeforeground=c_color,
+                           font=("Arial", 9, "bold")).pack(side="left", expand=True)
 
-        # Action Buttons (Bottom of Right Panel)
-        btn_frame = tk.Frame(right_panel, bg=self.colors["bg_surface"])
-        btn_frame.pack(fill="x", padx=15, pady=15)
+        # ── Global Bottom Button Row ──
+        btn_row = tk.Frame(main_vbox, bg=self.colors["bg_root"])
+        btn_row.pack(fill="x", pady=(10, 0))
         
-        self.btn_capture = tk.Button(btn_frame, text="📸 Capture / Live", command=self.toggle_live,
+        self.btn_capture = tk.Button(btn_row, text="📸 Capture / Live", command=self.toggle_live,
                                      bg=self.colors["bg_button"], fg="white", font=("Arial", 10, "bold"), height=2)
-        self.btn_capture.pack(fill="x", pady=2)
+        self.btn_capture.pack(side="left", fill="x", expand=True, padx=2)
         
-        self.btn_open_file = tk.Button(btn_frame, text="📂 Buka Gambar Lokal", command=self.open_local_file,
+        self.btn_open_file = tk.Button(btn_row, text="📂 Buka Gambar", command=self.open_local_file,
                                        bg="#16A085", fg="white", font=("Arial", 10, "bold"), height=2)
-        self.btn_open_file.pack(fill="x", pady=2)
+        self.btn_open_file.pack(side="left", fill="x", expand=True, padx=2)
         
-        db_exp_frame = tk.Frame(btn_frame, bg=self.colors["bg_surface"])
-        db_exp_frame.pack(fill="x", pady=2)
+        tk.Button(btn_row, text="💾 Simpan DB", command=self.save_to_database,
+                  bg=self.colors["accent"], fg="white", font=("Arial", 10, "bold"), height=2).pack(side="left", fill="x", expand=True, padx=2)
         
-        tk.Button(db_exp_frame, text="💾 Simpan ke Database", command=self.save_to_database,
-                  bg=self.colors["accent"], fg="white", font=("Arial", 9, "bold"), height=2).pack(side="left", fill="x", expand=True, padx=(0, 2))
+        tk.Button(btn_row, text="📤 Export Excel", command=self.export_to_excel,
+                  bg=self.colors["green"], fg="white", font=("Arial", 10, "bold"), height=2).pack(side="left", fill="x", expand=True, padx=2)
         
-        tk.Button(db_exp_frame, text="📤 Export ke Excel", command=self.export_to_excel,
-                  bg=self.colors["green"], fg="white", font=("Arial", 9, "bold"), height=2).pack(side="left", fill="x", expand=True, padx=(2, 0))
-        
-        tk.Button(btn_frame, text="❌ Tutup Halaman", command=self.close,
-                  bg=self.colors["red"], fg="white", font=("Arial", 10, "bold"), height=2).pack(fill="x", pady=2)
+        tk.Button(btn_row, text="❌ Tutup", command=self.close,
+                  bg=self.colors["red"], fg="white", font=("Arial", 10, "bold"), height=2).pack(side="left", fill="x", expand=True, padx=2)
 
         # History Table Area (Bottom)
         hist_table_frame = tk.LabelFrame(main_vbox, text=" Riwayat Analisis Warna (Database Supabase) ", 
@@ -368,7 +362,7 @@ class AnalisisWarnaWindow(tk.Toplevel):
         if target_w < 50: target_w, target_h = 760, 428 # Default size from profile
         
         rgb = cv2.cvtColor(disp_frame, cv2.COLOR_BGR2RGB)
-        rendered = resize_cover_rgb(rgb, target_w, target_h)
+        rendered = self._resize_cover(rgb, target_w, target_h)
         img = Image.fromarray(rendered)
         imgtk = ImageTk.PhotoImage(image=img)
         self.video_label.imgtk = imgtk
@@ -418,28 +412,124 @@ class AnalisisWarnaWindow(tk.Toplevel):
         self.hist_canvas.update_idletasks()
         w = self.hist_canvas.winfo_width()
         h = self.hist_canvas.winfo_height()
-        if w < 10: return
+        if w < 10 or h < 10: return
         self.hist_canvas.delete("all")
-        
-        # opencv bgr -> indices are 0:B, 1:G, 2:R
-        # colors for drawing (matching line_colors)
-        line_colors = ['#4FA3FF', '#27AE60', '#E74C3C'] # Blue, Green, Red
+
+        # Layout margins for axes
+        left_m = 48
+        right_m = 10
+        top_m = 28
+        bottom_m = 28
+        plot_w = w - left_m - right_m
+        plot_h = h - top_m - bottom_m
+
+        # Background
+        self.hist_canvas.create_rectangle(left_m, top_m, w - right_m, h - bottom_m,
+                                          fill="#1a2a40", outline="#3a5a80", width=1)
+
+        # Channel info: (cv index, color hex, name)
+        channels_info = [
+            (0, '#4FA3FF', 'Blue'),
+            (1, '#27AE60', 'Green'),
+            (2, '#E74C3C', 'Red'),
+        ]
         show_flags = [self.show_b.get(), self.show_g.get(), self.show_r.get()]
-        
-        for i in range(3):
-            if not show_flags[i]:
+
+        # Compute raw histograms for peak detection
+        raw_hists = []
+        for ch_i, color, name in channels_info:
+            hist = cv2.calcHist([roi], [ch_i], None, [256], [0, 256]).flatten()
+            raw_hists.append((hist, color, name))
+
+        # Find global max for consistent Y scaling
+        active_hists = [h for i, (h, c, n) in enumerate(raw_hists) if show_flags[i]]
+        if not active_hists:
+            return
+        global_max = max(float(np.max(h)) for h in active_hists)
+        if global_max <= 0:
+            global_max = 1.0
+
+        # ── Gridlines & Y-axis labels ──
+        y_ticks = 4
+        for ti in range(y_ticks + 1):
+            frac = ti / y_ticks
+            gy = top_m + plot_h - int(frac * plot_h)
+            val = int(frac * global_max)
+            # Dashed gridline
+            if 0 < ti < y_ticks:
+                for gx in range(left_m, w - right_m, 6):
+                    self.hist_canvas.create_line(gx, gy, min(gx + 3, w - right_m), gy,
+                                                 fill="#304060", width=1)
+            # Tick + label
+            self.hist_canvas.create_line(left_m - 4, gy, left_m, gy, fill="#8aabcc", width=1)
+            label = f"{val // 1000}k" if val >= 1000 else str(val)
+            self.hist_canvas.create_text(left_m - 6, gy, text=label,
+                                         anchor="e", fill="#8aabcc", font=("Consolas", 8))
+
+        # ── X-axis labels ──
+        x_ticks = [0, 64, 128, 192, 255]
+        for xv in x_ticks:
+            px = left_m + int(xv / 255.0 * plot_w)
+            self.hist_canvas.create_line(px, h - bottom_m, px, h - bottom_m + 4, fill="#8aabcc", width=1)
+            self.hist_canvas.create_text(px, h - bottom_m + 12, text=str(xv),
+                                         anchor="center", fill="#8aabcc", font=("Consolas", 8))
+            # Dashed vertical gridline
+            if 0 < xv < 255:
+                for gy in range(top_m, h - bottom_m, 6):
+                    self.hist_canvas.create_line(px, gy, px, min(gy + 3, h - bottom_m),
+                                                 fill="#304060", width=1)
+
+        # ── Draw histogram lines + peak markers ──
+        peak_label_y = top_m - 10
+        for idx, (hist_data, color, name) in enumerate(raw_hists):
+            if not show_flags[idx]:
                 continue
-                
-            hist = cv2.calcHist([roi], [i], None, [256], [0, 256])
-            cv2.normalize(hist, hist, 0, h - 10, cv2.NORM_MINMAX)
+
+            # Draw line
             points = []
-            for x, y in enumerate(hist):
-                px = (x / 255.0) * (w - 10) + 5
-                py = h - 5 - y[0]
+            for x in range(256):
+                px = left_m + int(x / 255.0 * plot_w)
+                py = top_m + plot_h - int((hist_data[x] / global_max) * plot_h)
+                py = max(top_m, min(top_m + plot_h, py))
                 points.append((px, py))
             for j in range(len(points) - 1):
-                self.hist_canvas.create_line(points[j][0], points[j][1], points[j+1][0], points[j+1][1], 
-                                             fill=line_colors[i], width=2)
+                self.hist_canvas.create_line(
+                    points[j][0], points[j][1],
+                    points[j + 1][0], points[j + 1][1],
+                    fill=color, width=2
+                )
+
+            # Peak dot marker on the chart line
+            peak_idx = int(np.argmax(hist_data))
+            peak_val = int(hist_data[peak_idx])
+            peak_px = left_m + int(peak_idx / 255.0 * plot_w)
+            peak_py = top_m + plot_h - int((hist_data[peak_idx] / global_max) * plot_h)
+            peak_py = max(top_m, min(top_m + plot_h, peak_py))
+
+            # Filled circle at peak point
+            # Filled circle at peak point
+            self.hist_canvas.create_oval(peak_px - 4, peak_py - 4, peak_px + 4, peak_py + 4,
+                                          fill=color, outline="white", width=1)
+
+            # Value label with slight vertical offset based on channel to avoid overlap
+            label_x = peak_px + 7
+            label_y = peak_py - 5
+            
+            # Offset labels based on name to help prevent overlap
+            if name == "Red": label_y -= 10
+            if name == "Blue": label_y += 10
+            
+            # Keep label within bounds
+            if label_x + 30 > w - right_m:
+                label_x = peak_px - 35
+            if label_y < top_m + 8:
+                label_y = peak_py + 12
+            if label_y > h - bottom_m - 8:
+                label_y = peak_py - 12
+                
+            self.hist_canvas.create_text(label_x, label_y, text=f"{name[0]}:{peak_idx}",
+                                         anchor="w", fill=color, font=("Consolas", 9, "bold"))
+
 
     def export_to_excel(self):
         if not self.last_stats: return
@@ -457,6 +547,46 @@ class AnalisisWarnaWindow(tk.Toplevel):
             df.to_excel(filepath, index=False)
             messagebox.showinfo("Sukses", f"Export berhasil ke {filepath}")
         except Exception as e: messagebox.showerror("Error", str(e))
+
+    def _resize_contain(self, rgb_image, target_w, target_h):
+        src_h, src_w = rgb_image.shape[:2]
+        if src_h <= 0 or src_w <= 0:
+            return rgb_image
+
+        ratio = min(target_w / float(src_w), target_h / float(src_h))
+        new_w = max(1, int(src_w * ratio))
+        new_h = max(1, int(src_h * ratio))
+        
+        resized = cv2.resize(rgb_image, (new_w, new_h), interpolation=cv2.INTER_AREA)
+        
+        # Create theme-colored canvas instead of black
+        # hex #143457 -> BGR (87, 52, 20)
+        canvas = np.full((target_h, target_w, 3), (87, 52, 20), dtype=np.uint8)
+        y_off = (target_h - new_h) // 2
+        x_off = (target_w - new_w) // 2
+        
+        canvas[y_off:y_off+new_h, x_off:x_off+new_w] = resized
+        return canvas
+
+    def _resize_cover(self, rgb_image, target_w, target_h):
+        src_h, src_w = rgb_image.shape[:2]
+        if src_h <= 0 or src_w <= 0:
+            return rgb_image
+
+        ratio = max(target_w / float(src_w), target_h / float(src_h))
+        new_w = max(1, int(src_w * ratio))
+        new_h = max(1, int(src_h * ratio))
+        
+        interp = cv2.INTER_CUBIC if ratio > 1.0 else cv2.INTER_AREA
+        resized = cv2.resize(rgb_image, (new_w, new_h), interpolation=interp)
+        
+        x0 = (new_w - target_w) // 2
+        y0 = (new_h - target_h) // 2
+        
+        cropped = resized[y0:y0+target_h, x0:x0+target_w]
+        if cropped.shape[1] != target_w or cropped.shape[0] != target_h:
+            cropped = cv2.resize(cropped, (target_w, target_h), interpolation=cv2.INTER_AREA)
+        return cropped
 
     def close(self):
         self.is_running = False
