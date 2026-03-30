@@ -538,15 +538,30 @@ class AnalisisWarnaWindow(tk.Toplevel):
                                                 initialfile=f"Warna_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
         if not filepath: return
         try:
-            df = pd.DataFrame([{
-                "Waktu": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "Mean_R": self.last_stats["Mean_R"], "Mean_G": self.last_stats["Mean_G"], "Mean_B": self.last_stats["Mean_B"],
-                "Unique_Colors": self.last_stats["Unique_Colors"],
-                "Dom_R": self.last_stats["Dominant_R"], "Dom_G": self.last_stats["Dominant_G"], "Dom_B": self.last_stats["Dominant_B"]
-            }])
-            df.to_excel(filepath, index=False)
+            import openpyxl
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Analisis Warna"
+            # Header
+            headers = ["Waktu", "Mean_R", "Mean_G", "Mean_B", "Unique_Colors", "Dom_R", "Dom_G", "Dom_B"]
+            ws.append(headers)
+            # Data row
+            ws.append([
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                self.last_stats["Mean_R"],
+                self.last_stats["Mean_G"],
+                self.last_stats["Mean_B"],
+                self.last_stats["Unique_Colors"],
+                self.last_stats["Dominant_R"],
+                self.last_stats["Dominant_G"],
+                self.last_stats["Dominant_B"],
+            ])
+            wb.save(filepath)
             messagebox.showinfo("Sukses", f"Export berhasil ke {filepath}")
-        except Exception as e: messagebox.showerror("Error", str(e))
+        except ImportError:
+            messagebox.showerror("Error", "Module 'openpyxl' tidak ditemukan.\nJalankan: pip install openpyxl")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
 
     def _resize_contain(self, rgb_image, target_w, target_h):
         src_h, src_w = rgb_image.shape[:2]
