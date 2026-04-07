@@ -1,6 +1,6 @@
 # services/hull_service.py — Convex hull, background removal, face detection
 # Diambil dari ConversiHullWindow.
-# Tidak ada import tkinter di file ini.
+
 
 import os
 import cv2
@@ -110,7 +110,7 @@ def _build_person_mask(bgr):
     return person_mask, faces
 
 def _extract_rembg_mask(bgr):
-    if not rembg_enabled or rembg_remove is None:
+    if _REMBG_AVAILABLE is False or rembg_remove is None:
         return None
     try:
         ok, encoded = cv2.imencode(".png", bgr)

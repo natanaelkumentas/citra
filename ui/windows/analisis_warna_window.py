@@ -524,7 +524,12 @@ class AnalisisWarnaWindow(tk.Toplevel):
             if label_y > h - bottom_m - 8:
                 label_y = peak_py - 12
                 
-            self.hist_canvas.create_text(label_x, label_y, text=f"{name[0]}:{peak_idx}",
+            # Format: 'X-axis (Count)'
+            label_text = f"{name[0]}:{peak_idx} ({peak_val})"
+            if peak_val > 1000:
+                label_text = f"{name[0]}:{peak_idx} ({peak_val//1000}k)"
+
+            self.hist_canvas.create_text(label_x, label_y, text=label_text,
                                          anchor="w", fill=color, font=("Consolas", 9, "bold"))
 
 

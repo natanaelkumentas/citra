@@ -9,13 +9,8 @@ import numpy as np
 import tkinter as tk
 from PIL import Image, ImageTk
 from tkinter import filedialog, messagebox
-try:
-    from rembg import remove as rembg_remove
-except Exception:
-    rembg_remove = None
-
 from core.config import SUPABASE_TABLE_ANALISIS
-from services import camera_service, supabase_service, hull_service
+from services import camera_service, supabase_service, hull_service, image_service
 
 
 class ConversiHullWindow(tk.Toplevel):
@@ -35,10 +30,7 @@ class ConversiHullWindow(tk.Toplevel):
         self.result_image = None
         self.current_source_name = "-"
         self.current_metrics = None
-        self.rembg_enabled = rembg_remove is not None
-
-        self.face_cascade = self._load_cascade("haarcascade_frontalface_default.xml")
-        self.face_alt_cascade = self._load_cascade("haarcascade_frontalface_alt2.xml")
+        self.current_metrics = None
 
         self.colors = {
             "bg_root": "#0B1D36",
@@ -302,7 +294,7 @@ class ConversiHullWindow(tk.Toplevel):
         if not file_path:
             return
 
-        bgr = self._imread_unicode(file_path)
+        bgr = image_service.imread_unicode(file_path)
         if bgr is None:
             messagebox.showerror("Error", "Gagal membaca file gambar.")
             return
@@ -366,8 +358,7 @@ class ConversiHullWindow(tk.Toplevel):
         self.current_source_name = f"capture_hull_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
 
         try:
-            save_path = os.path.join(self.drive_folder, self.current_source_name)
-            cv2.imwrite(save_path, self.source_image)
+            self.current_source_name = image_service.save_capture(self.drive_folder, self.source_image, prefix="capture_hull")
         except Exception:
             pass
 
@@ -386,19 +377,6 @@ class ConversiHullWindow(tk.Toplevel):
 
         self._show_bgr_on_label(self.result_label, self.result_image, empty_text="Belum ada hasil")
         self._update_metric_panel(metrics)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     def _update_metric_panel(self, metrics):
         if not metrics:
@@ -667,15 +645,6 @@ class ConversiHullWindow(tk.Toplevel):
             index, rem = divmod(index - 1, 26)
             name = chr(65 + rem) + name
         return name
-
-    def _imread_unicode(self, path):
-        try:
-            data = np.fromfile(path, dtype=np.uint8)
-            if data.size == 0:
-                return None
-            return cv2.imdecode(data, cv2.IMREAD_COLOR)
-        except Exception:
-            return None
 
     def _stop_camera(self):
         self.is_camera_running = False

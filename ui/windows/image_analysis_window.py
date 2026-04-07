@@ -206,6 +206,7 @@ class ImageAnalysisWindow(tk.Toplevel):
 
         buttons = [
             ("📸 Capture", self.capture_and_analyze, "#2980b9", "#2471a3"),
+            ("▶️ Resume", self.clear_current_analysis, "#F39C12", "#D68910"),
             ("💾 Simpan", self.save_to_supabase, "#27AE60", "#239B56"),
             ("📤 Export Excel", self.export_to_excel, "#8E44AD", "#732D91"),
             ("🗑️ Hapus", self.delete_data, "#E74C3C", "#C0392B"),
@@ -468,14 +469,15 @@ class ImageAnalysisWindow(tk.Toplevel):
         draw.text((max(left_m, gray_x - 12), 2), f"Y:{gray_peak}", fill=(90, 90, 90))
 
         for idx, (name, hist, color, peak_idx) in enumerate(channels):
+            peak_val = int(hist[peak_idx])
             peak_x = left_m + int((peak_idx / 255.0) * plot_w)
             peak_y = top_m + plot_h - int((float(hist[peak_idx]) / max_val) * plot_h)
             draw.ellipse((peak_x - 4, peak_y - 4, peak_x + 4, peak_y + 4), fill=color, outline=(0, 0, 0))
             draw.line((peak_x, top_m, peak_x, peak_y), fill=color, width=1)
 
-            label = f"{name}:{peak_idx}"
+            label = f"{name}:{peak_idx} ({peak_val//1000}k)" if peak_val >= 1000 else f"{name}:{peak_idx} ({peak_val})"
             text_x = peak_x - 16
-            text_x = max(left_m, min(text_x, left_m + plot_w - 42))
+            text_x = max(left_m, min(text_x, left_m + plot_w - 70))
             text_y = max(2, top_m - 28 + (idx * 10))
             draw.text((text_x, text_y), label, fill=color)
 
@@ -765,10 +767,9 @@ class ImageAnalysisWindow(tk.Toplevel):
                 safe_name = urllib.parse.quote(name, safe="")
                 filter_query = f"nama_citra=eq.{safe_name}"
 
-            self.supabase_request(
-                method="DELETE",
-                path=f"/rest/v1/{self.SUPABASE_TABLE}?{filter_query}",
-                prefer_return=True
+            supabase_service.delete_record(
+                table=SUPABASE_TABLE_IMAGE_STATS, 
+                filter_query=filter_query
             )
 
             self.last_saved_id = None
@@ -822,13 +823,6 @@ class ImageAnalysisWindow(tk.Toplevel):
         if self.last_frame_bgr is not None:
             self.show_frame(self.last_frame_bgr)
         self.set_status("Data lokal dibersihkan. Live camera aktif kembali.")
-
-    def supabase_request(self, method, path, payload=None, prefer_return=False):
-        # NOTE: metode ini sudah digantikan oleh supabase_service.
-        # Dibiarkan agar tidak ada referensi yang hilang dari caller lama.
-        raise NotImplementedError(
-            "Gunakan supabase_service.insert_record / fetch_records / delete_record."
-        )
 
     def set_status(self, text):
         self.status_label.config(text=f"Status: {text}")

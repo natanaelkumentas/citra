@@ -16,7 +16,7 @@ SUPABASE_TABLE_IMAGE_STATS = "image_statistics"   # dipakai ImageAnalysisWindow
 SUPABASE_TABLE_ANALISIS    = "analisis_gambar"    # dipakai AnalisisWarnaWindow
 
 # ── IoT / ESP32 ──
-ESP32_DEFAULT_HOST = "10.51.23.248"
+ESP32_DEFAULT_HOST = "10.192.232.248"
 
 # ── Kamera ──
 DEFAULT_CAMERA_URL   = "http://172.29.241.86:8081/video"

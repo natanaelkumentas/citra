@@ -1,7 +1,7 @@
 # services/filter_service.py — Semua algoritma filter citra
 # Fungsi murni: input numpy array (BGR), output numpy array.
 # Diambil dari AnalisisFilterWindow.apply_filter() dan method-method di dalamnya.
-# Tidak ada import tkinter di file ini.
+
 
 import cv2
 import numpy as np

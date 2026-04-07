@@ -625,7 +625,7 @@ class AnalisisFilterWindow(tk.Toplevel):
             cv2.circle(canvas, (peak_x, peak_y), 6, (255, 255, 255), 1, cv2.LINE_AA)
 
             # Peak label next to the dot
-            peak_text = f"{name[0]}:{peak_idx}"
+            peak_text = f"{name[0]}:{peak_idx} ({peak_val//1000}k)" if peak_val >= 1000 else f"{name[0]}:{peak_idx} ({peak_val})"
             label_x = peak_x + 8
             label_y = peak_y - 6
             
